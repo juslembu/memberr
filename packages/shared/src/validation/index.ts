@@ -25,6 +25,7 @@ export const changePasswordSchema = z.object({
 export const createShopSchema = z.object({
   name: z.string().min(1).max(100),
   color: z.string().regex(/^#[0-9A-Fa-f]{6}$/).default('#0EA5E9'),
+  logoUrl: z.string().optional().nullable(),
 })
 
 export const createCardSchema = z.object({
@@ -36,7 +37,7 @@ export const createCardSchema = z.object({
     .string()
     .regex(/^#[0-9A-Fa-f]{6}$/)
     .optional(),
-  logoUrl: z.string().url().optional(),
+  logoUrl: z.string().optional(),
   cardImageUrl: z.string().optional(),
 })
 

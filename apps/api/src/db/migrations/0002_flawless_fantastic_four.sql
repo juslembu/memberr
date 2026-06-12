@@ -1,0 +1,1 @@
+ALTER TABLE "predefined_shops" ADD COLUMN "logo_url" text;

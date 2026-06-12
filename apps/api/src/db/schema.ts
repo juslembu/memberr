@@ -26,6 +26,7 @@ export const predefinedShops = pgTable('predefined_shops', {
   id: uuid('id').primaryKey().defaultRandom(),
   name: text('name').notNull(),
   color: text('color').notNull().default('#0EA5E9'),
+  logoUrl: text('logo_url'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 })
 

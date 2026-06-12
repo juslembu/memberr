@@ -9,6 +9,7 @@ import {
   Platform,
   ActivityIndicator,
   Image,
+  TouchableOpacity,
 } from 'react-native'
 import { useRouter, useFocusEffect } from 'expo-router'
 import { pickImage } from '../../../lib/imagePicker'
@@ -78,6 +79,7 @@ export default function AddCardScreen() {
   const [barcodeType, setBarcodeType] = useState<BarcodeType>('CODE128')
   const [notes, setNotes] = useState('')
   const [color, setColor] = useState(CARD_COLORS[0])
+  const [logoUrl, setLogoUrl] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [detecting, setDetecting] = useState(false)
   const [detectError, setDetectError] = useState('')
@@ -94,6 +96,7 @@ export default function AddCardScreen() {
     setBarcodeType('CODE128')
     setNotes('')
     setColor(CARD_COLORS[0])
+    setLogoUrl(null)
     setSaving(false)
     setDetecting(false)
     setDetectError('')
@@ -151,6 +154,7 @@ export default function AddCardScreen() {
         barcodeType,
         notes: notes.trim() || undefined,
         color,
+        logoUrl: logoUrl ?? undefined,
         cardImageUrl: cardDataUrl ?? undefined,
       })
       router.replace('/(tabs)/my-cards')
@@ -256,9 +260,13 @@ export default function AddCardScreen() {
                 <Pressable
                   key={shop.id}
                   style={styles.chip}
-                  onPress={() => { setStoreName(shop.name); setColor(shop.color) }}
+                  onPress={() => { setStoreName(shop.name); setColor(shop.color); setLogoUrl(shop.logoUrl ?? null) }}
                 >
-                  <View style={[styles.chipDot, { backgroundColor: shop.color }]} />
+                  {shop.logoUrl ? (
+                    <Image source={{ uri: shop.logoUrl }} style={styles.chipLogo} resizeMode="contain" />
+                  ) : (
+                    <View style={[styles.chipDot, { backgroundColor: shop.color }]} />
+                  )}
                   <Text style={styles.chipText}>{shop.name}</Text>
                 </Pressable>
               ))}
@@ -397,7 +405,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     ...(Platform.OS === 'web' ? { cursor: 'pointer' } as any : {}),
   },
-  chipDot: { width: 10, height: 10, borderRadius: 5 },
+  chipDot: { width: 14, height: 14, borderRadius: 7 },
+  chipLogo: { width: 20, height: 20, borderRadius: 4 },
   chipText: { fontSize: 14, fontWeight: '600', color: '#374151' },
   form: { padding: 24 },
   errorBox: { backgroundColor: '#fef2f2', borderRadius: 10, padding: 12, marginBottom: 12 },

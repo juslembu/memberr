@@ -51,6 +51,7 @@ export interface PredefinedShop {
   id: string
   name: string
   color: string
+  logoUrl: string | null
   createdAt: string
 }
 

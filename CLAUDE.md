@@ -27,7 +27,7 @@ pnpm db:migrate    # apply migrations
 # Production deploys — always use these, never plain docker restart
 pnpm deploy:web   # frontend only: Expo export + force-recreate Caddy
 pnpm deploy:api   # API only: docker build + force-recreate API container
-pnpm deploy       # both: deploy:api then deploy:web
+pnpm deploy:all   # both: deploy:api then deploy:web
 ```
 
 ## Architecture

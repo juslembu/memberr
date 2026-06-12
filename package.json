@@ -10,7 +10,7 @@
     "db:generate": "pnpm --filter @memberr/api db:generate",
     "deploy:web": "pnpm --filter @memberr/mobile build:web && docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --force-recreate caddy",
     "deploy:api": "docker compose build api && docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --force-recreate api",
-    "deploy": "pnpm deploy:api && pnpm deploy:web"
+    "deploy:all": "pnpm deploy:api && pnpm deploy:web"
   },
   "devDependencies": {
     "turbo": "^2.3.3",

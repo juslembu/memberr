@@ -9,12 +9,14 @@ import {
   Modal,
   ActivityIndicator,
   RefreshControl,
-  ScrollView,
+  Image,
   Platform,
+  ScrollView,
 } from 'react-native'
 import { useFocusEffect } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { api, ApiError } from '../../lib/api'
+import { pickImage } from '../../lib/imagePicker'
 import { t } from '../../lib/theme'
 import type { PredefinedShop } from '@memberr/shared'
 
@@ -26,7 +28,25 @@ const COLORS = [
 
 const webCursor = Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : {}
 
-type ShopForm = { name: string; color: string }
+type ShopForm = { name: string; color: string; logoUrl: string | null }
+
+async function compressLogoDataUrl(uri: string): Promise<string | null> {
+  if (Platform.OS !== 'web') return null
+  try {
+    const img = new (window as any).Image()
+    img.src = uri
+    await new Promise<void>((resolve, reject) => { img.onload = () => resolve(); img.onerror = reject })
+    const maxW = 200
+    const scale = img.width > maxW ? maxW / img.width : 1
+    const canvas = document.createElement('canvas')
+    canvas.width = Math.round(img.width * scale)
+    canvas.height = Math.round(img.height * scale)
+    canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height)
+    return canvas.toDataURL('image/png')
+  } catch {
+    return null
+  }
+}
 
 export default function AdminShopsScreen() {
   const [shops, setShops] = useState<PredefinedShop[]>([])
@@ -36,7 +56,8 @@ export default function AdminShopsScreen() {
 
   const [modalVisible, setModalVisible] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
-  const [form, setForm] = useState<ShopForm>({ name: '', color: COLORS[0] })
+  const [form, setForm] = useState<ShopForm>({ name: '', color: COLORS[0], logoUrl: null })
+  const [uploadingLogo, setUploadingLogo] = useState(false)
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState('')
 
@@ -61,16 +82,28 @@ export default function AdminShopsScreen() {
 
   function openAdd() {
     setEditingId(null)
-    setForm({ name: '', color: COLORS[0] })
+    setForm({ name: '', color: COLORS[0], logoUrl: null })
     setFormError('')
     setModalVisible(true)
   }
 
   function openEdit(shop: PredefinedShop) {
     setEditingId(shop.id)
-    setForm({ name: shop.name, color: shop.color })
+    setForm({ name: shop.name, color: shop.color, logoUrl: shop.logoUrl ?? null })
     setFormError('')
     setModalVisible(true)
+  }
+
+  async function handlePickLogo() {
+    setUploadingLogo(true)
+    try {
+      const picked = await pickImage()
+      if (!picked) return
+      const dataUrl = await compressLogoDataUrl(picked.uri)
+      setForm((f) => ({ ...f, logoUrl: dataUrl ?? picked.uri }))
+    } finally {
+      setUploadingLogo(false)
+    }
   }
 
   async function handleSave() {
@@ -78,10 +111,11 @@ export default function AdminShopsScreen() {
     setSaving(true)
     setFormError('')
     try {
+      const payload = { name: form.name.trim(), color: form.color, logoUrl: form.logoUrl }
       if (editingId) {
-        await api.admin.updateShop(editingId, { name: form.name.trim(), color: form.color })
+        await api.admin.updateShop(editingId, payload)
       } else {
-        await api.admin.createShop({ name: form.name.trim(), color: form.color })
+        await api.admin.createShop(payload)
       }
       setModalVisible(false)
       await load()
@@ -141,7 +175,11 @@ export default function AdminShopsScreen() {
         }
         renderItem={({ item }) => (
           <View style={styles.row}>
-            <View style={[styles.colorDot, { backgroundColor: item.color }]} />
+            {item.logoUrl ? (
+              <Image source={{ uri: item.logoUrl }} style={styles.logoThumb} resizeMode="contain" />
+            ) : (
+              <View style={[styles.colorDot, { backgroundColor: item.color }]} />
+            )}
             <Text style={styles.shopName}>{item.name}</Text>
             <TouchableOpacity style={[styles.iconBtn, webCursor]} onPress={() => openEdit(item)}>
               <Ionicons name="pencil-outline" size={16} color={t.textMuted} />
@@ -160,46 +198,80 @@ export default function AdminShopsScreen() {
       {/* Add / Edit modal */}
       <Modal visible={modalVisible} transparent animationType="fade" onRequestClose={() => setModalVisible(false)}>
         <View style={styles.overlay}>
-          <View style={styles.dialog}>
-            <Text style={styles.dialogTitle}>{editingId ? 'Edit shop' : 'Add shop'}</Text>
+          <ScrollView contentContainerStyle={styles.overlayScroll} keyboardShouldPersistTaps="handled">
+            <View style={styles.dialog}>
+              <Text style={styles.dialogTitle}>{editingId ? 'Edit shop' : 'Add shop'}</Text>
 
-            {formError ? (
-              <View style={styles.formErrorBox}>
-                <Text style={styles.formErrorText}>{formError}</Text>
+              {formError ? (
+                <View style={styles.formErrorBox}>
+                  <Text style={styles.formErrorText}>{formError}</Text>
+                </View>
+              ) : null}
+
+              <Text style={styles.fieldLabel}>Name</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="e.g. Emart"
+                placeholderTextColor={t.textSubtle}
+                value={form.name}
+                onChangeText={(v) => setForm((f) => ({ ...f, name: v }))}
+                autoCapitalize="words"
+                returnKeyType="done"
+              />
+
+              <Text style={styles.fieldLabel}>Logo (optional)</Text>
+              <View style={styles.logoRow}>
+                {form.logoUrl ? (
+                  <View style={styles.logoPreviewWrap}>
+                    <Image source={{ uri: form.logoUrl }} style={styles.logoPreview} resizeMode="contain" />
+                  </View>
+                ) : (
+                  <View style={[styles.logoPreviewWrap, styles.logoPlaceholder]}>
+                    <Ionicons name="image-outline" size={28} color={t.textSubtle} />
+                  </View>
+                )}
+                <View style={styles.logoActions}>
+                  <TouchableOpacity
+                    style={[styles.logoBtn, webCursor, uploadingLogo && styles.btnDisabled]}
+                    onPress={handlePickLogo}
+                    disabled={uploadingLogo}
+                  >
+                    <Ionicons name="cloud-upload-outline" size={15} color={t.accent} />
+                    <Text style={styles.logoBtnText}>{uploadingLogo ? 'Uploading…' : form.logoUrl ? 'Change' : 'Upload'}</Text>
+                  </TouchableOpacity>
+                  {form.logoUrl && (
+                    <TouchableOpacity
+                      style={[styles.logoBtn, styles.logoBtnRemove, webCursor]}
+                      onPress={() => setForm((f) => ({ ...f, logoUrl: null }))}
+                    >
+                      <Ionicons name="trash-outline" size={15} color="#DC2626" />
+                      <Text style={styles.logoBtnRemoveText}>Remove</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
               </View>
-            ) : null}
 
-            <Text style={styles.fieldLabel}>Name</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="e.g. Emart"
-              placeholderTextColor={t.textSubtle}
-              value={form.name}
-              onChangeText={(v) => setForm((f) => ({ ...f, name: v }))}
-              autoCapitalize="words"
-              returnKeyType="done"
-            />
+              <Text style={styles.fieldLabel}>Colour</Text>
+              <View style={styles.colorRow}>
+                {COLORS.map((c) => (
+                  <TouchableOpacity
+                    key={c}
+                    style={[styles.colorSwatch, { backgroundColor: c }, form.color === c && styles.colorSelected]}
+                    onPress={() => setForm((f) => ({ ...f, color: c }))}
+                  />
+                ))}
+              </View>
 
-            <Text style={styles.fieldLabel}>Colour</Text>
-            <View style={styles.colorRow}>
-              {COLORS.map((c) => (
-                <TouchableOpacity
-                  key={c}
-                  style={[styles.colorSwatch, { backgroundColor: c }, form.color === c && styles.colorSelected]}
-                  onPress={() => setForm((f) => ({ ...f, color: c }))}
-                />
-              ))}
+              <View style={styles.dialogActions}>
+                <TouchableOpacity style={[styles.cancelBtn, webCursor]} onPress={() => setModalVisible(false)} disabled={saving}>
+                  <Text style={styles.cancelText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.confirmBtn, saving && styles.btnDisabled, webCursor]} onPress={handleSave} disabled={saving}>
+                  <Text style={styles.confirmText}>{saving ? 'Saving…' : 'Save'}</Text>
+                </TouchableOpacity>
+              </View>
             </View>
-
-            <View style={styles.dialogActions}>
-              <TouchableOpacity style={[styles.cancelBtn, webCursor]} onPress={() => setModalVisible(false)} disabled={saving}>
-                <Text style={styles.cancelText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.confirmBtn, saving && styles.btnDisabled, webCursor]} onPress={handleSave} disabled={saving}>
-                <Text style={styles.confirmText}>{saving ? 'Saving…' : 'Save'}</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
+          </ScrollView>
         </View>
       </Modal>
 
@@ -246,7 +318,8 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     elevation: 2,
   },
-  colorDot: { width: 28, height: 28, borderRadius: 14, marginRight: 12 },
+  logoThumb: { width: 36, height: 36, borderRadius: 8, marginRight: 12, backgroundColor: t.bg },
+  colorDot: { width: 36, height: 36, borderRadius: 8, marginRight: 12 },
   shopName: { flex: 1, fontSize: 16, fontWeight: '600', color: t.text },
   iconBtn: { width: 34, height: 34, borderRadius: 8, backgroundColor: t.bg, justifyContent: 'center', alignItems: 'center', marginLeft: 6 },
   deleteIconBtn: { backgroundColor: '#FEF2F2' },
@@ -272,13 +345,15 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
 
-  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center', padding: 24 },
+  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', padding: 24 },
+  overlayScroll: { flexGrow: 1, justifyContent: 'center' },
   dialog: {
     backgroundColor: t.surface,
     borderRadius: 16,
     padding: 24,
     width: '100%',
     maxWidth: 400,
+    alignSelf: 'center',
     shadowColor: '#000',
     shadowOpacity: 0.2,
     shadowRadius: 20,
@@ -301,6 +376,34 @@ const styles = StyleSheet.create({
     backgroundColor: t.bg,
     marginBottom: 12,
   },
+
+  logoRow: { flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 16 },
+  logoPreviewWrap: {
+    width: 72,
+    height: 72,
+    borderRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: t.bg,
+    borderWidth: 1,
+    borderColor: t.border,
+  },
+  logoPlaceholder: { justifyContent: 'center', alignItems: 'center' },
+  logoPreview: { width: '100%', height: '100%' },
+  logoActions: { flex: 1, gap: 8 },
+  logoBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderWidth: 1,
+    borderColor: t.accent,
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+  logoBtnText: { fontSize: 13, fontWeight: '600', color: t.accent },
+  logoBtnRemove: { borderColor: '#FEE2E2' },
+  logoBtnRemoveText: { fontSize: 13, fontWeight: '600', color: '#DC2626' },
+
   colorRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 20 },
   colorSwatch: { width: 36, height: 36, borderRadius: 18 },
   colorSelected: { borderWidth: 3, borderColor: t.text },

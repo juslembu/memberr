@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import {
   View,
   Text,
@@ -10,7 +10,7 @@ import {
   ActivityIndicator,
   Image,
 } from 'react-native'
-import { useRouter } from 'expo-router'
+import { useRouter, useFocusEffect } from 'expo-router'
 import { pickImage } from '../../../lib/imagePicker'
 import { Ionicons } from '@expo/vector-icons'
 import { api, ApiError } from '../../../lib/api'
@@ -86,6 +86,22 @@ export default function AddCardScreen() {
   const [cardDataUrl, setCardDataUrl] = useState<string | null>(null)
   const scannedOnce = useRef(false)
 
+  useFocusEffect(useCallback(() => {
+    setStep('method')
+    setStoreName('')
+    setCardNumber('')
+    setBarcodeType('CODE128')
+    setNotes('')
+    setColor(CARD_COLORS[0])
+    setSaving(false)
+    setDetecting(false)
+    setDetectError('')
+    setShowTypePicker(false)
+    setUploadedImageUri(null)
+    setCardDataUrl(null)
+    scannedOnce.current = false
+  }, []))
+
   function handleScanned(type: BarcodeType, value: string) {
     if (scannedOnce.current) return
     scannedOnce.current = true
@@ -135,7 +151,7 @@ export default function AddCardScreen() {
         color,
         cardImageUrl: cardDataUrl ?? undefined,
       })
-      router.back()
+      router.replace('/(tabs)/my-cards')
     } catch (err) {
       setDetectError(err instanceof ApiError ? err.message : 'Failed to save card')
     } finally {

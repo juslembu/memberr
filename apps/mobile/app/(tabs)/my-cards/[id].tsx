@@ -5,7 +5,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Alert,
   TextInput,
   Modal,
   ActivityIndicator,
@@ -17,6 +16,14 @@ import { api, ApiError } from '../../../lib/api'
 import { BarcodeDisplay } from '../../../components/BarcodeDisplay'
 import type { Card, CardShare, BarcodeType } from '@memberr/shared'
 
+type ConfirmModal = {
+  title: string
+  message: string
+  confirmLabel: string
+  destructive?: boolean
+  onConfirm: () => Promise<void>
+}
+
 export default function CardDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>()
   const router = useRouter()
@@ -26,9 +33,13 @@ export default function CardDetailScreen() {
   const [shareEmail, setShareEmail] = useState('')
   const [sharing, setSharing] = useState(false)
   const [showShareModal, setShowShareModal] = useState(false)
+  const [confirmModal, setConfirmModal] = useState<ConfirmModal | null>(null)
+  const [confirmRunning, setConfirmRunning] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
+    setError(null)
     try {
       const [cardData, shareData] = await Promise.all([
         api.cards.get(id),
@@ -37,7 +48,7 @@ export default function CardDetailScreen() {
       setCard(cardData)
       setShares(shareData)
     } catch {
-      Alert.alert('Error', 'Failed to load card')
+      setError('Failed to load card')
     } finally {
       setLoading(false)
     }
@@ -48,44 +59,54 @@ export default function CardDetailScreen() {
   async function handleShare() {
     if (!shareEmail.trim()) return
     setSharing(true)
+    setError(null)
     try {
       await api.shares.share(id, { email: shareEmail.trim() })
       setShareEmail('')
       setShowShareModal(false)
       await load()
     } catch (err) {
-      Alert.alert('Error', err instanceof ApiError ? err.message : 'Failed to share')
+      setError(err instanceof ApiError ? err.message : 'Failed to share')
     } finally {
       setSharing(false)
     }
   }
 
-  async function handleRevoke(shareId: string, username: string) {
-    Alert.alert(`Revoke access`, `Remove ${username}'s access to this card?`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Revoke',
-        style: 'destructive',
-        onPress: async () => {
-          await api.shares.revoke(id, shareId).catch(() => {})
-          await load()
-        },
+  function handleRevoke(shareId: string, username: string) {
+    setConfirmModal({
+      title: 'Revoke access',
+      message: `Remove ${username}'s access to this card?`,
+      confirmLabel: 'Revoke',
+      destructive: true,
+      onConfirm: async () => {
+        await api.shares.revoke(id, shareId).catch(() => {})
+        await load()
       },
-    ])
+    })
   }
 
-  async function handleDelete() {
-    Alert.alert('Delete card', 'This will also remove access for anyone you shared it with.', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          await api.cards.remove(id).catch(() => {})
-          router.back()
-        },
+  function handleDelete() {
+    setConfirmModal({
+      title: 'Delete card',
+      message: 'This will also remove access for anyone you shared it with.',
+      confirmLabel: 'Delete',
+      destructive: true,
+      onConfirm: async () => {
+        await api.cards.remove(id).catch(() => {})
+        router.replace('/(tabs)/my-cards')
       },
-    ])
+    })
+  }
+
+  async function runConfirm() {
+    if (!confirmModal) return
+    setConfirmRunning(true)
+    try {
+      await confirmModal.onConfirm()
+    } finally {
+      setConfirmRunning(false)
+      setConfirmModal(null)
+    }
   }
 
   if (loading || !card) {
@@ -98,6 +119,12 @@ export default function CardDetailScreen() {
 
   return (
     <ScrollView style={styles.container}>
+      {error && (
+        <View style={styles.errorBanner}>
+          <Text style={styles.errorText}>{error}</Text>
+        </View>
+      )}
+
       <View style={[styles.cardHero, { backgroundColor: card.color ?? '#6366f1' }]}>
         <Text style={styles.heroStore}>{card.storeName}</Text>
         <Text style={styles.heroNumber}>{card.cardNumber}</Text>
@@ -164,6 +191,35 @@ export default function CardDetailScreen() {
         <Text style={styles.deleteText}>Delete card</Text>
       </TouchableOpacity>
 
+      <Modal visible={!!confirmModal} animationType="fade" transparent>
+        <View style={[styles.modalOverlay, styles.confirmOverlay]}>
+          <View style={[styles.modalContent, styles.confirmContent]}>
+            <Text style={styles.modalTitle}>{confirmModal?.title}</Text>
+            <Text style={styles.confirmMessage}>{confirmModal?.message}</Text>
+            <TouchableOpacity
+              style={[
+                styles.modalButton,
+                confirmModal?.destructive && styles.destructiveButton,
+                confirmRunning && styles.buttonDisabled,
+              ]}
+              onPress={runConfirm}
+              disabled={confirmRunning}
+            >
+              <Text style={styles.modalButtonText}>
+                {confirmRunning ? 'Please wait…' : confirmModal?.confirmLabel}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setConfirmModal(null)}
+              style={styles.modalCancel}
+              disabled={confirmRunning}
+            >
+              <Text style={styles.modalCancelText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
       <Modal visible={showShareModal} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
@@ -224,6 +280,7 @@ const styles = StyleSheet.create({
   },
   deleteText: { color: '#ef4444', fontSize: 15, fontWeight: '600' },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
+  confirmOverlay: { justifyContent: 'center' },
   modalContent: { backgroundColor: '#fff', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24 },
   modalTitle: { fontSize: 18, fontWeight: '700', color: '#111827', marginBottom: 16 },
   modalInput: {
@@ -238,4 +295,9 @@ const styles = StyleSheet.create({
   modalButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
   modalCancel: { paddingVertical: 14, alignItems: 'center' },
   modalCancelText: { color: '#6b7280', fontSize: 15 },
+  confirmContent: { marginHorizontal: 24, borderRadius: 16 },
+  confirmMessage: { fontSize: 14, color: '#6b7280', marginBottom: 8, lineHeight: 20 },
+  destructiveButton: { backgroundColor: '#ef4444' },
+  errorBanner: { backgroundColor: '#fef2f2', padding: 14, borderBottomWidth: 1, borderBottomColor: '#fecaca' },
+  errorText: { color: '#dc2626', fontSize: 14, textAlign: 'center' },
 })

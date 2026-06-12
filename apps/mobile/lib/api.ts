@@ -37,8 +37,9 @@ async function clearAccessToken(): Promise<void> {
 
 async function fetchWithAuth(path: string, options: RequestInit = {}): Promise<Response> {
   const token = await getAccessToken()
+  const hasBody = options.body != null
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
+    ...(hasBody ? { 'Content-Type': 'application/json' } : {}),
     ...(options.headers as Record<string, string>),
   }
   if (token) headers['Authorization'] = `Bearer ${token}`

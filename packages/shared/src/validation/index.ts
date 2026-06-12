@@ -27,6 +27,7 @@ export const createCardSchema = z.object({
     .regex(/^#[0-9A-Fa-f]{6}$/)
     .optional(),
   logoUrl: z.string().url().optional(),
+  cardImageUrl: z.string().optional(),
 })
 
 export const updateCardSchema = createCardSchema.partial()

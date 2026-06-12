@@ -9,6 +9,7 @@ import {
   TextInput,
   Modal,
   ActivityIndicator,
+  Image,
 } from 'react-native'
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
@@ -107,6 +108,17 @@ export default function CardDetailScreen() {
         <Text style={styles.barcodeLabel}>{card.barcodeType.replace('_', ' ')}</Text>
       </View>
 
+      {card.cardImageUrl && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Card image</Text>
+          <Image
+            source={{ uri: card.cardImageUrl }}
+            style={styles.cardImage}
+            resizeMode="contain"
+          />
+        </View>
+      )}
+
       {card.notes && (
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Notes</Text>
@@ -195,6 +207,7 @@ const styles = StyleSheet.create({
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
   sectionTitle: { fontSize: 16, fontWeight: '700', color: '#111827' },
   notes: { fontSize: 15, color: '#374151', lineHeight: 22 },
+  cardImage: { width: '100%', height: 200, borderRadius: 10, backgroundColor: '#f3f4f6', marginTop: 8 },
   emptyShares: { fontSize: 14, color: '#9ca3af', textAlign: 'center', paddingVertical: 12 },
   shareRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, gap: 12 },
   shareAvatar: {

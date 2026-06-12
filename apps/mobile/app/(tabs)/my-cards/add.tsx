@@ -27,6 +27,24 @@ const CARD_COLORS = [
 
 type Step = 'method' | 'scanning' | 'form'
 
+async function compressToDataUrl(uri: string): Promise<string | null> {
+  if (Platform.OS !== 'web') return null
+  try {
+    const img = new window.Image()
+    img.src = uri
+    await new Promise<void>((resolve, reject) => { img.onload = () => resolve(); img.onerror = reject })
+    const maxW = 1200
+    const scale = img.width > maxW ? maxW / img.width : 1
+    const canvas = document.createElement('canvas')
+    canvas.width = Math.round(img.width * scale)
+    canvas.height = Math.round(img.height * scale)
+    canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height)
+    return canvas.toDataURL('image/jpeg', 0.75)
+  } catch {
+    return null
+  }
+}
+
 async function detectBarcodeFromImage(uri: string): Promise<{ value: string; type: BarcodeType } | null> {
   if (Platform.OS !== 'web') return null
   try {
@@ -65,6 +83,7 @@ export default function AddCardScreen() {
   const [detectError, setDetectError] = useState('')
   const [showTypePicker, setShowTypePicker] = useState(false)
   const [uploadedImageUri, setUploadedImageUri] = useState<string | null>(null)
+  const [cardDataUrl, setCardDataUrl] = useState<string | null>(null)
   const scannedOnce = useRef(false)
 
   function handleScanned(type: BarcodeType, value: string) {
@@ -88,7 +107,11 @@ export default function AddCardScreen() {
 
     setUploadedImageUri(uri)
     setDetecting(true)
-    const detected = await detectBarcodeFromImage(uri)
+    const [detected, dataUrl] = await Promise.all([
+      detectBarcodeFromImage(uri),
+      compressToDataUrl(uri),
+    ])
+    setCardDataUrl(dataUrl)
     setDetecting(false)
 
     if (detected) {
@@ -110,6 +133,7 @@ export default function AddCardScreen() {
         barcodeType,
         notes: notes.trim() || undefined,
         color,
+        cardImageUrl: cardDataUrl ?? undefined,
       })
       router.back()
     } catch (err) {
@@ -247,7 +271,7 @@ export default function AddCardScreen() {
           style={[styles.input, styles.textarea]}
           value={notes}
           onChangeText={setNotes}
-          placeholder="e.g. Rewards tier, PIN, notes"
+          placeholder="e.g. Rewards tier, member since, notes"
           placeholderTextColor="#9ca3af"
           multiline
           numberOfLines={3}

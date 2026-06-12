@@ -8,6 +8,7 @@ import {
   ScrollView,
   Platform,
   ActivityIndicator,
+  Image,
 } from 'react-native'
 import { useRouter } from 'expo-router'
 import { pickImage } from '../../../lib/imagePicker'
@@ -63,6 +64,7 @@ export default function AddCardScreen() {
   const [detecting, setDetecting] = useState(false)
   const [detectError, setDetectError] = useState('')
   const [showTypePicker, setShowTypePicker] = useState(false)
+  const [uploadedImageUri, setUploadedImageUri] = useState<string | null>(null)
   const scannedOnce = useRef(false)
 
   function handleScanned(type: BarcodeType, value: string) {
@@ -84,6 +86,7 @@ export default function AddCardScreen() {
       return
     }
 
+    setUploadedImageUri(uri)
     setDetecting(true)
     const detected = await detectBarcodeFromImage(uri)
     setDetecting(false)
@@ -186,22 +189,29 @@ export default function AddCardScreen() {
         </View>
       ) : (
         <View style={[styles.previewCard, { backgroundColor: color }]}>
-          <Text style={styles.previewStore}>{storeName || 'Store Name'}</Text>
+          <Text style={styles.previewStore}>{storeName || 'Shop Name'}</Text>
           <Text style={styles.previewNumber}>{'0000 0000 0000'}</Text>
         </View>
       )}
+
+      {uploadedImageUri ? (
+        <View style={styles.imageRefSection}>
+          <Text style={styles.imageRefLabel}>Uploaded card</Text>
+          <Image source={{ uri: uploadedImageUri }} style={styles.imageRef} resizeMode="contain" />
+        </View>
+      ) : null}
 
       <View style={styles.form}>
         {detectError ? (
           <View style={styles.errorBox}><Text style={styles.errorText}>{detectError}</Text></View>
         ) : null}
 
-        <Text style={styles.label}>Store name *</Text>
+        <Text style={styles.label}>Shop name *</Text>
         <TextInput
           style={styles.input}
           value={storeName}
           onChangeText={setStoreName}
-          placeholder="e.g. Costco, Target, CVS"
+          placeholder="e.g. Emart, Doremart, Everise"
           placeholderTextColor="#9ca3af"
         />
 
@@ -301,6 +311,9 @@ const styles = StyleSheet.create({
   methodDesc: { fontSize: 13, color: '#6b7280', lineHeight: 18 },
   barcodePreview: { backgroundColor: '#fff', padding: 24, alignItems: 'center', gap: 8 },
   detectedLabel: { fontSize: 12, color: '#9ca3af', textAlign: 'center' },
+  imageRefSection: { backgroundColor: '#fff', paddingHorizontal: 24, paddingBottom: 16, alignItems: 'center', gap: 6 },
+  imageRefLabel: { fontSize: 12, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: 0.5, alignSelf: 'flex-start' },
+  imageRef: { width: '100%', height: 160, borderRadius: 10, backgroundColor: '#f3f4f6' },
   previewCard: {
     margin: 20, borderRadius: 16, padding: 24, minHeight: 110, justifyContent: 'space-between',
     shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 10, elevation: 4,

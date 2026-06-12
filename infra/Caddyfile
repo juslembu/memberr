@@ -1,5 +1,4 @@
-# Replace memberr.yourdomain.com with your actual domain
-memberr.yourdomain.com {
+memberr.cowjuice.xyz {
     encode gzip
 
     # Serve Expo web build (if present)

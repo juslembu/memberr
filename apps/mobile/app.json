@@ -38,6 +38,9 @@
         }
       ]
     ],
+    "extra": {
+      "apiUrl": "https://memberr.cowjuice.xyz"
+    },
     "experiments": {
       "typedRoutes": true
     }

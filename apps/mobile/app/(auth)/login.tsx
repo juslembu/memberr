@@ -3,10 +3,11 @@ import {
   View,
   Text,
   TextInput,
-  TouchableOpacity,
+  Pressable,
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
+  ScrollView,
 } from 'react-native'
 import { Link } from 'expo-router'
 import { useAuth } from '../../hooks/useAuth'
@@ -20,7 +21,10 @@ export default function LoginScreen() {
   const [error, setError] = useState('')
 
   async function handleLogin() {
-    if (!email || !password) return
+    if (!email || !password) {
+      setError('Please enter your email and password')
+      return
+    }
     setError('')
     setLoading(true)
     try {
@@ -32,59 +36,74 @@ export default function LoginScreen() {
     }
   }
 
+  const inner = (
+    <ScrollView contentContainerStyle={styles.inner} keyboardShouldPersistTaps="handled">
+      <Text style={styles.logo}>Memberr</Text>
+      <Text style={styles.subtitle}>Share memberships with the people you trust</Text>
+
+      {error ? (
+        <View style={styles.errorBox}>
+          <Text style={styles.errorText}>{error}</Text>
+        </View>
+      ) : null}
+
+      <TextInput
+        style={styles.input}
+        placeholder="Email"
+        placeholderTextColor="#9ca3af"
+        value={email}
+        onChangeText={setEmail}
+        autoCapitalize="none"
+        keyboardType="email-address"
+        autoComplete="email"
+        returnKeyType="next"
+      />
+      <TextInput
+        style={styles.input}
+        placeholder="Password"
+        placeholderTextColor="#9ca3af"
+        value={password}
+        onChangeText={setPassword}
+        secureTextEntry
+        autoComplete="current-password"
+        returnKeyType="done"
+        onSubmitEditing={handleLogin}
+      />
+
+      <Pressable
+        style={({ pressed }) => [styles.button, (loading || pressed) && styles.buttonDisabled]}
+        onPress={handleLogin}
+        disabled={loading}
+      >
+        <Text style={styles.buttonText}>{loading ? 'Signing in…' : 'Sign in'}</Text>
+      </Pressable>
+
+      <View style={styles.footer}>
+        <Text style={styles.footerText}>Don't have an account? </Text>
+        <Link href="/(auth)/register" style={styles.link}>
+          Create one
+        </Link>
+      </View>
+    </ScrollView>
+  )
+
+  if (Platform.OS === 'web') {
+    return <View style={styles.container}>{inner}</View>
+  }
+
   return (
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <View style={styles.inner}>
-        <Text style={styles.logo}>Memberr</Text>
-        <Text style={styles.subtitle}>Share memberships with the people you trust</Text>
-
-        {error ? <View style={styles.errorBox}><Text style={styles.errorText}>{error}</Text></View> : null}
-
-        <TextInput
-          style={styles.input}
-          placeholder="Email"
-          placeholderTextColor="#9ca3af"
-          value={email}
-          onChangeText={setEmail}
-          autoCapitalize="none"
-          keyboardType="email-address"
-          autoComplete="email"
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Password"
-          placeholderTextColor="#9ca3af"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-          autoComplete="current-password"
-        />
-
-        <TouchableOpacity
-          style={[styles.button, loading && styles.buttonDisabled]}
-          onPress={handleLogin}
-          disabled={loading}
-        >
-          <Text style={styles.buttonText}>{loading ? 'Signing in…' : 'Sign in'}</Text>
-        </TouchableOpacity>
-
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>Don't have an account? </Text>
-          <Link href="/(auth)/register" style={styles.link}>
-            Create one
-          </Link>
-        </View>
-      </View>
+      {inner}
     </KeyboardAvoidingView>
   )
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
-  inner: { flex: 1, justifyContent: 'center', paddingHorizontal: 24 },
+  inner: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: 24, paddingVertical: 40 },
   logo: { fontSize: 40, fontWeight: '800', color: '#6366f1', textAlign: 'center', marginBottom: 8 },
   subtitle: {
     fontSize: 16,

@@ -3,7 +3,7 @@ import {
   View,
   Text,
   TextInput,
-  TouchableOpacity,
+  Pressable,
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
@@ -23,7 +23,10 @@ export default function RegisterScreen() {
   const [error, setError] = useState('')
 
   async function handleRegister() {
-    if (!email || !username || !password) return
+    if (!email || !username || !password) {
+      setError('Please fill in all required fields')
+      return
+    }
     setError('')
     setLoading(true)
     try {
@@ -35,69 +38,86 @@ export default function RegisterScreen() {
     }
   }
 
+  const inner = (
+    <ScrollView contentContainerStyle={styles.inner} keyboardShouldPersistTaps="handled">
+      <Text style={styles.logo}>Memberr</Text>
+      <Text style={styles.subtitle}>Create your account</Text>
+
+      {error ? (
+        <View style={styles.errorBox}>
+          <Text style={styles.errorText}>{error}</Text>
+        </View>
+      ) : null}
+
+      <TextInput
+        style={styles.input}
+        placeholder="Display name (optional)"
+        placeholderTextColor="#9ca3af"
+        value={displayName}
+        onChangeText={setDisplayName}
+        autoComplete="name"
+        returnKeyType="next"
+      />
+      <TextInput
+        style={styles.input}
+        placeholder="Username"
+        placeholderTextColor="#9ca3af"
+        value={username}
+        onChangeText={setUsername}
+        autoCapitalize="none"
+        autoComplete="username-new"
+        returnKeyType="next"
+      />
+      <TextInput
+        style={styles.input}
+        placeholder="Email"
+        placeholderTextColor="#9ca3af"
+        value={email}
+        onChangeText={setEmail}
+        autoCapitalize="none"
+        keyboardType="email-address"
+        autoComplete="email"
+        returnKeyType="next"
+      />
+      <TextInput
+        style={styles.input}
+        placeholder="Password (min 8 characters)"
+        placeholderTextColor="#9ca3af"
+        value={password}
+        onChangeText={setPassword}
+        secureTextEntry
+        autoComplete="new-password"
+        returnKeyType="done"
+        onSubmitEditing={handleRegister}
+      />
+
+      <Pressable
+        style={({ pressed }) => [styles.button, (loading || pressed) && styles.buttonDisabled]}
+        onPress={handleRegister}
+        disabled={loading}
+      >
+        <Text style={styles.buttonText}>{loading ? 'Creating account…' : 'Create account'}</Text>
+      </Pressable>
+
+      <View style={styles.footer}>
+        <Text style={styles.footerText}>Already have an account? </Text>
+        <Link href="/(auth)/login" style={styles.link}>
+          Sign in
+        </Link>
+      </View>
+    </ScrollView>
+  )
+
+  if (Platform.OS === 'web') {
+    return <View style={styles.container}>{inner}</View>
+  }
+
   return (
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <ScrollView contentContainerStyle={styles.inner} keyboardShouldPersistTaps="handled">
-        <Text style={styles.logo}>Memberr</Text>
-        <Text style={styles.subtitle}>Create your account</Text>
-
-        {error ? <View style={styles.errorBox}><Text style={styles.errorText}>{error}</Text></View> : null}
-
-        <TextInput
-          style={styles.input}
-          placeholder="Display name (optional)"
-          placeholderTextColor="#9ca3af"
-          value={displayName}
-          onChangeText={setDisplayName}
-          autoComplete="name"
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Username"
-          placeholderTextColor="#9ca3af"
-          value={username}
-          onChangeText={setUsername}
-          autoCapitalize="none"
-          autoComplete="username-new"
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Email"
-          placeholderTextColor="#9ca3af"
-          value={email}
-          onChangeText={setEmail}
-          autoCapitalize="none"
-          keyboardType="email-address"
-          autoComplete="email"
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Password (min 8 characters)"
-          placeholderTextColor="#9ca3af"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-          autoComplete="new-password"
-        />
-
-        <TouchableOpacity
-          style={[styles.button, loading && styles.buttonDisabled]}
-          onPress={handleRegister}
-          disabled={loading}
-        >
-          <Text style={styles.buttonText}>{loading ? 'Creating account…' : 'Create account'}</Text>
-        </TouchableOpacity>
-
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>Already have an account? </Text>
-          <Link href="/(auth)/login" style={styles.link}>
-            Sign in
-          </Link>
-        </View>
-      </ScrollView>
+      {inner}
     </KeyboardAvoidingView>
   )
 }

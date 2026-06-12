@@ -1,0 +1,28 @@
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./infra/Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - api
+
+  api:
+    restart: unless-stopped
+    ports: []
+    environment:
+      NODE_ENV: production
+
+  postgres:
+    restart: unless-stopped
+    ports: []
+
+volumes:
+  caddy_data:
+  caddy_config:

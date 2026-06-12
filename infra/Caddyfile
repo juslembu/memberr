@@ -1,0 +1,26 @@
+# Replace memberr.yourdomain.com with your actual domain
+memberr.yourdomain.com {
+    encode gzip
+
+    # Serve Expo web build (if present)
+    handle /static/* {
+        root * /srv/web
+        file_server
+    }
+
+    # API
+    handle /api/* {
+        reverse_proxy api:3000
+    }
+
+    handle /health {
+        reverse_proxy api:3000
+    }
+
+    # SPA fallback — serve index.html for all other paths
+    handle {
+        root * /srv/web
+        try_files {path} /index.html
+        file_server
+    }
+}

@@ -37,7 +37,13 @@
           "cameraPermission": "Allow Memberr to access your camera to scan membership cards."
         }
       ],
-      "expo-asset"
+      "expo-asset",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow Memberr to access your photos to upload membership card images."
+        }
+      ]
     ],
     "extra": {
       "apiUrl": "https://memberr.cowjuice.xyz"

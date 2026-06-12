@@ -1,4 +1,5 @@
 import * as SecureStore from 'expo-secure-store'
+import { Platform } from 'react-native'
 import Constants from 'expo-constants'
 import type {
   User,
@@ -20,14 +21,17 @@ const API_URL: string =
 const ACCESS_TOKEN_KEY = 'memberr_access_token'
 
 async function getAccessToken(): Promise<string | null> {
+  if (Platform.OS === 'web') return localStorage.getItem(ACCESS_TOKEN_KEY)
   return SecureStore.getItemAsync(ACCESS_TOKEN_KEY)
 }
 
 async function setAccessToken(token: string): Promise<void> {
+  if (Platform.OS === 'web') { localStorage.setItem(ACCESS_TOKEN_KEY, token); return }
   return SecureStore.setItemAsync(ACCESS_TOKEN_KEY, token)
 }
 
 async function clearAccessToken(): Promise<void> {
+  if (Platform.OS === 'web') { localStorage.removeItem(ACCESS_TOKEN_KEY); return }
   return SecureStore.deleteItemAsync(ACCESS_TOKEN_KEY)
 }
 

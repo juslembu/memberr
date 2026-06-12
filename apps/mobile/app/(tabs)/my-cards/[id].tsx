@@ -112,7 +112,7 @@ export default function CardDetailScreen() {
   if (loading || !card) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#6366f1" />
+        <ActivityIndicator size="large" color="#0EA5E9" />
       </View>
     )
   }
@@ -125,7 +125,7 @@ export default function CardDetailScreen() {
         </View>
       )}
 
-      <View style={[styles.cardHero, { backgroundColor: card.color ?? '#6366f1' }]}>
+      <View style={[styles.cardHero, { backgroundColor: card.color ?? '#0EA5E9' }]}>
         <Text style={styles.heroStore}>{card.storeName}</Text>
         <Text style={styles.heroNumber}>{card.cardNumber}</Text>
       </View>
@@ -157,7 +157,7 @@ export default function CardDetailScreen() {
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Shared with ({shares.length})</Text>
           <TouchableOpacity onPress={() => setShowShareModal(true)}>
-            <Ionicons name="person-add-outline" size={22} color="#6366f1" />
+            <Ionicons name="person-add-outline" size={22} color="#0EA5E9" />
           </TouchableOpacity>
         </View>
 
@@ -267,10 +267,10 @@ const styles = StyleSheet.create({
   emptyShares: { fontSize: 14, color: '#9ca3af', textAlign: 'center', paddingVertical: 12 },
   shareRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, gap: 12 },
   shareAvatar: {
-    width: 40, height: 40, borderRadius: 20, backgroundColor: '#ede9fe',
+    width: 40, height: 40, borderRadius: 20, backgroundColor: '#E0F2FE',
     justifyContent: 'center', alignItems: 'center',
   },
-  shareAvatarText: { fontSize: 16, fontWeight: '700', color: '#6366f1' },
+  shareAvatarText: { fontSize: 16, fontWeight: '700', color: '#0EA5E9' },
   shareInfo: { flex: 1 },
   shareName: { fontSize: 15, fontWeight: '600', color: '#111827' },
   shareEmail: { fontSize: 13, color: '#6b7280' },
@@ -288,7 +288,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14, paddingVertical: 12, fontSize: 16, color: '#111827',
   },
   modalButton: {
-    backgroundColor: '#6366f1', borderRadius: 12,
+    backgroundColor: '#0EA5E9', borderRadius: 12,
     paddingVertical: 16, alignItems: 'center', marginTop: 12,
   },
   buttonDisabled: { opacity: 0.6 },

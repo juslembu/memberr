@@ -39,7 +39,7 @@ export default function SharedWithMeScreen() {
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#6366f1" />
+        <ActivityIndicator size="large" color="#0EA5E9" />
       </View>
     )
   }
@@ -65,7 +65,7 @@ export default function SharedWithMeScreen() {
         }
         renderItem={({ item }) => (
           <TouchableOpacity
-            style={[styles.card, { borderLeftColor: item.card.color ?? '#6366f1' }]}
+            style={[styles.card, { borderLeftColor: item.card.color ?? '#0EA5E9' }]}
             onPress={() => router.push(`/(tabs)/shared-with-me/${item.shareId}`)}
             activeOpacity={0.8}
           >

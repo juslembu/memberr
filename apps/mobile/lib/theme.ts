@@ -1,0 +1,15 @@
+export const t = {
+  bg: '#F8FAFC',
+  surface: '#FFFFFF',
+  text: '#0F172A',
+  textMuted: '#64748B',
+  textSubtle: '#94A3B8',
+  accent: '#0EA5E9',
+  accentDark: '#0284C7',
+  accentBg: '#F0F9FF',
+  brand: '#0F172A',
+  border: '#E2E8F0',
+  borderStrong: '#CBD5E1',
+  errorBg: '#FEF2F2',
+  errorText: '#DC2626',
+} as const

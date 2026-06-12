@@ -5,32 +5,41 @@ import {
   StyleSheet,
   ScrollView,
   ActivityIndicator,
-  Alert,
 } from 'react-native'
 import { useLocalSearchParams, useFocusEffect } from 'expo-router'
 import { api } from '../../../lib/api'
 import { BarcodeDisplay } from '../../../components/BarcodeDisplay'
+import { t } from '../../../lib/theme'
 import type { SharedCard, BarcodeType } from '@memberr/shared'
 
 export default function SharedCardDetailScreen() {
   const { shareId } = useLocalSearchParams<{ shareId: string }>()
   const [data, setData] = useState<SharedCard | null>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useFocusEffect(
     useCallback(() => {
       api.sharedWithMe
         .get(shareId)
         .then(setData)
-        .catch(() => Alert.alert('Error', 'Failed to load card'))
+        .catch(() => setError('Failed to load card'))
         .finally(() => setLoading(false))
     }, [shareId]),
   )
 
-  if (loading || !data) {
+  if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#6366f1" />
+        <ActivityIndicator size="large" color={t.accent} />
+      </View>
+    )
+  }
+
+  if (error || !data) {
+    return (
+      <View style={styles.center}>
+        <Text style={styles.errorText}>{error ?? 'Card not found'}</Text>
       </View>
     )
   }
@@ -39,7 +48,7 @@ export default function SharedCardDetailScreen() {
 
   return (
     <ScrollView style={styles.container}>
-      <View style={[styles.cardHero, { backgroundColor: card.color ?? '#6366f1' }]}>
+      <View style={[styles.cardHero, { backgroundColor: card.color ?? t.accent }]}>
         <Text style={styles.heroStore}>{card.storeName}</Text>
         <Text style={styles.sharedBy}>
           Shared by {grantedBy.displayName ?? grantedBy.username}
@@ -71,16 +80,17 @@ export default function SharedCardDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f9fafb' },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  container: { flex: 1, backgroundColor: t.bg },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
+  errorText: { color: t.errorText, fontSize: 15, textAlign: 'center' },
   cardHero: { padding: 28, paddingTop: 40 },
-  heroStore: { fontSize: 28, fontWeight: '800', color: '#fff' },
-  sharedBy: { fontSize: 13, color: 'rgba(255,255,255,0.75)', marginTop: 4 },
-  heroNumber: { fontSize: 18, color: 'rgba(255,255,255,0.85)', letterSpacing: 2, marginTop: 16 },
-  barcodeSection: { backgroundColor: '#fff', padding: 24, alignItems: 'center', gap: 8 },
-  barcodeLabel: { fontSize: 12, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: 1 },
-  section: { backgroundColor: '#fff', padding: 20, marginTop: 12 },
-  sectionTitle: { fontSize: 16, fontWeight: '700', color: '#111827', marginBottom: 8 },
-  notes: { fontSize: 15, color: '#374151', lineHeight: 22 },
-  expiry: { fontSize: 14, color: '#f59e0b', fontWeight: '600' },
+  heroStore: { fontSize: 28, fontWeight: '800', color: '#fff', letterSpacing: -0.5 },
+  sharedBy: { fontSize: 13, color: 'rgba(255,255,255,0.70)', marginTop: 4 },
+  heroNumber: { fontSize: 17, color: 'rgba(255,255,255,0.85)', letterSpacing: 2, marginTop: 16 },
+  barcodeSection: { backgroundColor: t.surface, padding: 24, alignItems: 'center', gap: 8 },
+  barcodeLabel: { fontSize: 11, color: t.textSubtle, textTransform: 'uppercase', letterSpacing: 1 },
+  section: { backgroundColor: t.surface, padding: 20, marginTop: 1 },
+  sectionTitle: { fontSize: 13, fontWeight: '600', color: t.textMuted, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 8 },
+  notes: { fontSize: 15, color: t.text, lineHeight: 22 },
+  expiry: { fontSize: 14, color: '#D97706', fontWeight: '600' },
 })

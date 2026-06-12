@@ -20,7 +20,7 @@ import { BarcodeDisplay } from '../../../components/BarcodeDisplay'
 import { BarcodeScanner } from '../../../components/BarcodeScanner'
 
 const CARD_COLORS = [
-  '#6366f1', '#8b5cf6', '#ec4899', '#f43f5e',
+  '#0EA5E9', '#8b5cf6', '#ec4899', '#f43f5e',
   '#f97316', '#eab308', '#22c55e', '#14b8a6',
   '#3b82f6', '#64748b',
 ]
@@ -175,8 +175,8 @@ export default function AddCardScreen() {
         <Text style={styles.methodSub}>How would you like to add your card?</Text>
 
         <Pressable style={styles.methodCard} onPress={() => { scannedOnce.current = false; setStep('scanning') }}>
-          <View style={[styles.methodIcon, { backgroundColor: '#ede9fe' }]}>
-            <Ionicons name="scan-outline" size={28} color="#6366f1" />
+          <View style={[styles.methodIcon, { backgroundColor: '#E0F2FE' }]}>
+            <Ionicons name="scan-outline" size={28} color="#0EA5E9" />
           </View>
           <View style={styles.methodText}>
             <Text style={styles.methodLabel}>Scan barcode</Text>
@@ -355,8 +355,10 @@ const styles = StyleSheet.create({
   imageRefLabel: { fontSize: 12, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: 0.5, alignSelf: 'flex-start' },
   imageRef: { width: '100%', height: 160, borderRadius: 10, backgroundColor: '#f3f4f6' },
   previewCard: {
-    margin: 20, borderRadius: 16, padding: 24, minHeight: 110, justifyContent: 'space-between',
-    shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 10, elevation: 4,
+    margin: 20, borderRadius: 16, padding: 24, aspectRatio: 1.586,
+    justifyContent: 'space-between', overflow: 'hidden',
+    shadowColor: '#0F172A', shadowOpacity: 0.14, shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 }, elevation: 5,
   },
   previewStore: { fontSize: 22, fontWeight: '700', color: '#fff' },
   previewNumber: { fontSize: 15, color: 'rgba(255,255,255,0.85)', letterSpacing: 2, marginTop: 12 },
@@ -386,7 +388,7 @@ const styles = StyleSheet.create({
   },
   backBtnText: { fontSize: 16, fontWeight: '600', color: '#374151' },
   saveBtn: {
-    flex: 2, backgroundColor: '#6366f1', borderRadius: 12,
+    flex: 2, backgroundColor: '#0EA5E9', borderRadius: 12,
     paddingVertical: 15, alignItems: 'center',
   },
   btnDisabled: { opacity: 0.5 },
@@ -401,9 +403,9 @@ const styles = StyleSheet.create({
   },
   modalTitle: { fontSize: 18, fontWeight: '700', color: '#111827', marginBottom: 16 },
   modalItem: { paddingVertical: 14, paddingHorizontal: 8, borderRadius: 8 },
-  modalItemSelected: { backgroundColor: '#ede9fe' },
+  modalItemSelected: { backgroundColor: '#E0F2FE' },
   modalItemText: { fontSize: 16, color: '#374151' },
-  modalItemTextSelected: { color: '#6366f1', fontWeight: '600' },
+  modalItemTextSelected: { color: '#0EA5E9', fontWeight: '600' },
   modalCancel: { paddingVertical: 16, alignItems: 'center', marginTop: 8 },
   modalCancelText: { fontSize: 16, color: '#6b7280' },
 })

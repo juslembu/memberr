@@ -10,7 +10,7 @@ import {
   ActivityIndicator,
 } from 'react-native'
 import { useRouter } from 'expo-router'
-import * as ImagePicker from 'expo-image-picker'
+import { pickImage } from '../../../lib/imagePicker'
 import { Ionicons } from '@expo/vector-icons'
 import { api, ApiError } from '../../../lib/api'
 import { BARCODE_TYPES, BARCODE_LABELS } from '@memberr/shared'
@@ -75,12 +75,9 @@ export default function AddCardScreen() {
 
   async function handleUpload() {
     setDetectError('')
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      quality: 1,
-    })
-    if (result.canceled || !result.assets[0]) return
-    const uri = result.assets[0].uri
+    const picked = await pickImage()
+    if (!picked) return
+    const uri = picked.uri
 
     if (Platform.OS !== 'web') {
       setStep('form')

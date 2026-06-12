@@ -1,5 +1,6 @@
 import { useState, useEffect, createContext, useContext } from 'react'
-import { api, ApiError } from '../lib/api'
+import { router } from 'expo-router'
+import { api } from '../lib/api'
 import type { User, RegisterInput, LoginInput } from '@memberr/shared'
 
 interface AuthState {
@@ -37,16 +38,19 @@ export function useAuthState(): AuthState {
   async function login(data: LoginInput) {
     const result = await api.auth.login(data)
     setUser(result.user)
+    router.replace('/(tabs)/my-cards')
   }
 
   async function register(data: RegisterInput) {
     const result = await api.auth.register(data)
     setUser(result.user)
+    router.replace('/(tabs)/my-cards')
   }
 
   async function logout() {
     await api.auth.logout().catch(() => {})
     setUser(null)
+    router.replace('/(auth)/login')
   }
 
   return { user, loading, login, register, logout }

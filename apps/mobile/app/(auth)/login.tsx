@@ -7,7 +7,6 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
-  Alert,
 } from 'react-native'
 import { Link } from 'expo-router'
 import { useAuth } from '../../hooks/useAuth'
@@ -18,15 +17,16 @@ export default function LoginScreen() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
 
   async function handleLogin() {
     if (!email || !password) return
+    setError('')
     setLoading(true)
     try {
       await login({ email, password })
     } catch (err) {
-      const msg = err instanceof ApiError ? err.message : 'Something went wrong'
-      Alert.alert('Sign in failed', msg)
+      setError(err instanceof ApiError ? err.message : 'Something went wrong')
     } finally {
       setLoading(false)
     }
@@ -40,6 +40,8 @@ export default function LoginScreen() {
       <View style={styles.inner}>
         <Text style={styles.logo}>Memberr</Text>
         <Text style={styles.subtitle}>Share memberships with the people you trust</Text>
+
+        {error ? <View style={styles.errorBox}><Text style={styles.errorText}>{error}</Text></View> : null}
 
         <TextInput
           style={styles.input}
@@ -113,4 +115,6 @@ const styles = StyleSheet.create({
   footer: { flexDirection: 'row', justifyContent: 'center', marginTop: 24 },
   footerText: { color: '#6b7280', fontSize: 15 },
   link: { color: '#6366f1', fontSize: 15, fontWeight: '600' },
+  errorBox: { backgroundColor: '#fef2f2', borderRadius: 10, padding: 12, marginBottom: 12 },
+  errorText: { color: '#dc2626', fontSize: 14, textAlign: 'center' },
 })

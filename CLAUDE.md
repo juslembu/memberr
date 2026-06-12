@@ -24,8 +24,10 @@ pnpm --filter @memberr/mobile lint
 pnpm db:generate   # generate migration after editing apps/api/src/db/schema.ts
 pnpm db:migrate    # apply migrations
 
-# Production web deploy (build + force-recreate Caddy)
-pnpm deploy:web
+# Production deploys — always use these, never plain docker restart
+pnpm deploy:web   # frontend only: Expo export + force-recreate Caddy
+pnpm deploy:api   # API only: docker build + force-recreate API container
+pnpm deploy       # both: deploy:api then deploy:web
 ```
 
 ## Architecture
@@ -55,4 +57,4 @@ pnpm deploy:web
 - Display: `BarcodeDisplay.tsx` uses `react-native-barcode-svg` for linear codes and `react-native-qrcode-svg` for QR
 - Card images are compressed to base64 JPEG data URLs via canvas (max 1200px, 75% quality) and stored directly in the `cardImageUrl` DB column — no separate file upload endpoint
 
-**Deployment:** Docker Compose + Caddy on `memberr.cowjuice.xyz`. The prod override (`docker-compose.prod.yml`) mounts `apps/mobile/dist` into Caddy as a bind mount. Because `expo export` deletes and recreates `dist/` on each build, Caddy must be force-recreated after every web build — this is what `pnpm deploy:web` does.
+**Deployment:** Docker Compose + Caddy on `memberr.cowjuice.xyz`. The prod override (`docker-compose.prod.yml`) mounts `apps/mobile/dist` into Caddy as a bind mount. Because `expo export` deletes and recreates `dist/` on each build, Caddy must be force-recreated after every web build — this is what `pnpm deploy:web` does. The API is built into a Docker image (no source volume mount), so API source changes require `pnpm deploy:api` (rebuilds the image + force-recreates the container). A plain `docker compose restart` does NOT pick up source changes.

@@ -22,10 +22,7 @@ export default function TabsLayout() {
           fontWeight: '600',
           marginTop: 2,
         },
-        headerStyle: { backgroundColor: t.surface },
-        headerTintColor: t.text,
-        headerTitleStyle: { fontWeight: '700', letterSpacing: -0.3 } as any,
-        headerShadowVisible: false,
+        headerShown: false,
       }}
     >
       <Tabs.Screen

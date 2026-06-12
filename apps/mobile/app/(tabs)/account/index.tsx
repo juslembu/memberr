@@ -82,7 +82,7 @@ export default function AccountScreen() {
       {user?.isAdmin && (
         <TouchableOpacity
           style={[styles.adminBtn, webCursor]}
-          onPress={() => router.push('/(admin)/users')}
+          onPress={() => router.push('/(admin)')}
         >
           <Ionicons name="shield-checkmark-outline" size={18} color={t.accent} />
           <Text style={styles.adminBtnText}>Admin Panel</Text>

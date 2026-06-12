@@ -21,6 +21,7 @@ export default function AdminLayout() {
         headerShadowVisible: false,
       }}
     >
+      <Stack.Screen name="index" options={{ title: 'Admin Panel' }} />
       <Stack.Screen name="users" options={{ title: 'Users' }} />
       <Stack.Screen name="shops" options={{ title: 'Predefined Shops' }} />
     </Stack>

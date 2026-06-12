@@ -42,6 +42,15 @@ export interface User {
   username: string
   displayName: string | null
   avatarUrl: string | null
+  isAdmin: boolean
+  mustChangePassword: boolean
+  createdAt: string
+}
+
+export interface PredefinedShop {
+  id: string
+  name: string
+  color: string
   createdAt: string
 }
 

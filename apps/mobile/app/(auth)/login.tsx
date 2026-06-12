@@ -17,7 +17,7 @@ import { t } from '../../lib/theme'
 
 export default function LoginScreen() {
   const { login } = useAuth()
-  const [email, setEmail] = useState('')
+  const [identifier, setIdentifier] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -25,14 +25,14 @@ export default function LoginScreen() {
   const isWide = Platform.OS === 'web' && width >= 700
 
   async function handleLogin() {
-    if (!email || !password) {
-      setError('Please enter your email and password')
+    if (!identifier || !password) {
+      setError('Please enter your username/email and password')
       return
     }
     setError('')
     setLoading(true)
     try {
-      await login({ email, password })
+      await login({ identifier, password })
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Something went wrong')
     } finally {
@@ -49,13 +49,12 @@ export default function LoginScreen() {
       ) : null}
       <TextInput
         style={styles.input}
-        placeholder="Email"
+        placeholder="Email or username"
         placeholderTextColor={t.textSubtle}
-        value={email}
-        onChangeText={setEmail}
+        value={identifier}
+        onChangeText={setIdentifier}
         autoCapitalize="none"
-        keyboardType="email-address"
-        autoComplete="email"
+        autoComplete="username"
         returnKeyType="next"
       />
       <TextInput

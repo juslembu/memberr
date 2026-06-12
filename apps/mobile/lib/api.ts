@@ -7,11 +7,14 @@ import type {
   CardShare,
   Invitation,
   SharedCard,
+  PredefinedShop,
   CreateCardInput,
   UpdateCardInput,
   ShareCardInput,
   RegisterInput,
   LoginInput,
+  ChangePasswordInput,
+  CreateShopInput,
 } from '@memberr/shared'
 
 const API_URL: string =
@@ -119,6 +122,51 @@ export const api = {
 
     async me(): Promise<User> {
       return json<User>(await fetchWithAuth('/api/v1/auth/me'))
+    },
+
+    async changePassword(data: ChangePasswordInput): Promise<void> {
+      await json(await fetchWithAuth('/api/v1/auth/change-password', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }))
+    },
+  },
+
+  shops: {
+    async list(): Promise<PredefinedShop[]> {
+      return json<PredefinedShop[]>(await fetchWithAuth('/api/v1/shops'))
+    },
+  },
+
+  admin: {
+    async listUsers(): Promise<Pick<User, 'id' | 'email' | 'username' | 'displayName' | 'isAdmin' | 'createdAt'>[]> {
+      return json(await fetchWithAuth('/api/v1/admin/users'))
+    },
+
+    async deleteUser(id: string): Promise<void> {
+      await json(await fetchWithAuth(`/api/v1/admin/users/${id}`, { method: 'DELETE' }))
+    },
+
+    async listShops(): Promise<PredefinedShop[]> {
+      return json<PredefinedShop[]>(await fetchWithAuth('/api/v1/admin/shops'))
+    },
+
+    async createShop(data: CreateShopInput): Promise<PredefinedShop> {
+      return json<PredefinedShop>(await fetchWithAuth('/api/v1/admin/shops', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }))
+    },
+
+    async updateShop(id: string, data: Partial<CreateShopInput>): Promise<PredefinedShop> {
+      return json<PredefinedShop>(await fetchWithAuth(`/api/v1/admin/shops/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }))
+    },
+
+    async deleteShop(id: string): Promise<void> {
+      await json(await fetchWithAuth(`/api/v1/admin/shops/${id}`, { method: 'DELETE' }))
     },
   },
 

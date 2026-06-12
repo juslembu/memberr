@@ -11,6 +11,8 @@ import cardRoutes from './routes/cards.js'
 import shareRoutes from './routes/shares.js'
 import invitationRoutes from './routes/invitations.js'
 import sharedWithMeRoutes from './routes/shared-with-me.js'
+import shopRoutes from './routes/shops.js'
+import adminRoutes from './routes/admin.js'
 
 const app = Fastify({
   logger: {
@@ -37,6 +39,8 @@ async function start() {
   await app.register(shareRoutes, { prefix: '/api/v1/cards' })
   await app.register(invitationRoutes, { prefix: '/api/v1/invitations' })
   await app.register(sharedWithMeRoutes, { prefix: '/api/v1/shared-with-me' })
+  await app.register(shopRoutes, { prefix: '/api/v1/shops' })
+  await app.register(adminRoutes, { prefix: '/api/v1/admin' })
 
   app.get('/health', { config: { public: true } }, () => ({ ok: true }))
 

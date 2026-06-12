@@ -15,7 +15,7 @@ import { pickImage } from '../../../lib/imagePicker'
 import { Ionicons } from '@expo/vector-icons'
 import { api, ApiError } from '../../../lib/api'
 import { BARCODE_TYPES, BARCODE_LABELS } from '@memberr/shared'
-import type { BarcodeType } from '@memberr/shared'
+import type { BarcodeType, PredefinedShop } from '@memberr/shared'
 import { BarcodeDisplay } from '../../../components/BarcodeDisplay'
 import { BarcodeScanner } from '../../../components/BarcodeScanner'
 
@@ -84,6 +84,7 @@ export default function AddCardScreen() {
   const [showTypePicker, setShowTypePicker] = useState(false)
   const [uploadedImageUri, setUploadedImageUri] = useState<string | null>(null)
   const [cardDataUrl, setCardDataUrl] = useState<string | null>(null)
+  const [predefinedShops, setPredefinedShops] = useState<PredefinedShop[]>([])
   const scannedOnce = useRef(false)
 
   useFocusEffect(useCallback(() => {
@@ -100,6 +101,7 @@ export default function AddCardScreen() {
     setUploadedImageUri(null)
     setCardDataUrl(null)
     scannedOnce.current = false
+    api.shops.list().then(setPredefinedShops).catch(() => {})
   }, []))
 
   function handleScanned(type: BarcodeType, value: string) {
@@ -246,6 +248,24 @@ export default function AddCardScreen() {
           <View style={styles.errorBox}><Text style={styles.errorText}>{detectError}</Text></View>
         ) : null}
 
+        {predefinedShops.length > 0 && (
+          <View style={styles.chipsSection}>
+            <Text style={styles.chipsLabel}>Quick select</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsRow}>
+              {predefinedShops.map((shop) => (
+                <Pressable
+                  key={shop.id}
+                  style={styles.chip}
+                  onPress={() => { setStoreName(shop.name); setColor(shop.color) }}
+                >
+                  <View style={[styles.chipDot, { backgroundColor: shop.color }]} />
+                  <Text style={styles.chipText}>{shop.name}</Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+          </View>
+        )}
+
         <Text style={styles.label}>Shop name *</Text>
         <TextInput
           style={styles.input}
@@ -362,6 +382,23 @@ const styles = StyleSheet.create({
   },
   previewStore: { fontSize: 22, fontWeight: '700', color: '#fff' },
   previewNumber: { fontSize: 15, color: 'rgba(255,255,255,0.85)', letterSpacing: 2, marginTop: 12 },
+  chipsSection: { marginBottom: 4 },
+  chipsLabel: { fontSize: 11, fontWeight: '600', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 8, marginTop: 16 },
+  chipsRow: { gap: 8, paddingRight: 4 },
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    borderRadius: 20,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    ...(Platform.OS === 'web' ? { cursor: 'pointer' } as any : {}),
+  },
+  chipDot: { width: 10, height: 10, borderRadius: 5 },
+  chipText: { fontSize: 14, fontWeight: '600', color: '#374151' },
   form: { padding: 24 },
   errorBox: { backgroundColor: '#fef2f2', borderRadius: 10, padding: 12, marginBottom: 12 },
   errorText: { color: '#dc2626', fontSize: 14 },

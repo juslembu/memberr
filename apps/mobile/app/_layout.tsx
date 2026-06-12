@@ -19,7 +19,11 @@ export default function RootLayout() {
     <AuthContext.Provider value={auth}>
       <Stack screenOptions={{ headerShown: false }}>
         {auth.user ? (
-          <Stack.Screen name="(tabs)" />
+          <>
+            <Stack.Screen name="(tabs)" />
+            <Stack.Screen name="(admin)" />
+            <Stack.Screen name="change-password" />
+          </>
         ) : (
           <Stack.Screen name="(auth)" />
         )}

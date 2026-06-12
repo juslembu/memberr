@@ -8,6 +8,7 @@ import {
   Platform,
   ScrollView,
 } from 'react-native'
+import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { useAuth } from '../../../hooks/useAuth'
 import { t } from '../../../lib/theme'
@@ -16,6 +17,7 @@ const webCursor = Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : {}
 
 export default function AccountScreen() {
   const { user, logout } = useAuth()
+  const router = useRouter()
   const [confirmVisible, setConfirmVisible] = useState(false)
   const [loggingOut, setLoggingOut] = useState(false)
 
@@ -76,6 +78,17 @@ export default function AccountScreen() {
           </View>
         </View>
       </View>
+
+      {user?.isAdmin && (
+        <TouchableOpacity
+          style={[styles.adminBtn, webCursor]}
+          onPress={() => router.push('/(admin)/users')}
+        >
+          <Ionicons name="shield-checkmark-outline" size={18} color={t.accent} />
+          <Text style={styles.adminBtnText}>Admin Panel</Text>
+          <Ionicons name="chevron-forward" size={16} color={t.textSubtle} style={{ marginLeft: 'auto' } as any} />
+        </TouchableOpacity>
+      )}
 
       <TouchableOpacity
         style={[styles.logoutBtn, webCursor]}
@@ -187,6 +200,21 @@ const styles = StyleSheet.create({
   },
   rowValue: { fontSize: 15, color: t.text, fontWeight: '500' },
   divider: { height: 1, backgroundColor: t.border, marginLeft: 48 },
+
+  adminBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginHorizontal: 16,
+    marginTop: 16,
+    backgroundColor: t.surface,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: t.border,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+  },
+  adminBtnText: { fontSize: 16, fontWeight: '600', color: t.text },
 
   logoutBtn: {
     flexDirection: 'row',

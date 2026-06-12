@@ -13,8 +13,18 @@ export const registerSchema = z.object({
 })
 
 export const loginSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(1),
+  identifier: z.string().min(1, 'Required'),
+  password: z.string().min(1, 'Required'),
+})
+
+export const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1, 'Required'),
+  newPassword: z.string().min(8, 'At least 8 characters').max(128),
+})
+
+export const createShopSchema = z.object({
+  name: z.string().min(1).max(100),
+  color: z.string().regex(/^#[0-9A-Fa-f]{6}$/).default('#0EA5E9'),
 })
 
 export const createCardSchema = z.object({
@@ -39,6 +49,8 @@ export const shareCardSchema = z.object({
 
 export type RegisterInput = z.infer<typeof registerSchema>
 export type LoginInput = z.infer<typeof loginSchema>
+export type ChangePasswordInput = z.infer<typeof changePasswordSchema>
+export type CreateShopInput = z.infer<typeof createShopSchema>
 export type CreateCardInput = z.infer<typeof createCardSchema>
 export type UpdateCardInput = z.infer<typeof updateCardSchema>
 export type ShareCardInput = z.infer<typeof shareCardSchema>

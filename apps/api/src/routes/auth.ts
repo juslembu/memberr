@@ -1,12 +1,23 @@
 import { FastifyInstance } from 'fastify'
 import { db } from '../db/client.js'
 import { users } from '../db/schema.js'
-import { eq } from 'drizzle-orm'
+import { eq, or } from 'drizzle-orm'
 import * as argon2 from 'argon2'
-import { registerSchema, loginSchema } from '@memberr/shared'
+import { registerSchema, loginSchema, changePasswordSchema } from '@memberr/shared'
 import { authRouteHelpers } from '../plugins/auth.js'
 
 const REFRESH_COOKIE = 'memberr_refresh'
+
+const USER_FIELDS = {
+  id: users.id,
+  email: users.email,
+  username: users.username,
+  displayName: users.displayName,
+  avatarUrl: users.avatarUrl,
+  isAdmin: users.isAdmin,
+  mustChangePassword: users.mustChangePassword,
+  createdAt: users.createdAt,
+} as const
 
 export default async function authRoutes(app: FastifyInstance) {
   app.post(
@@ -38,13 +49,7 @@ export default async function authRoutes(app: FastifyInstance) {
       const [user] = await db
         .insert(users)
         .values({ email, username, passwordHash, displayName: displayName ?? null })
-        .returning({
-          id: users.id,
-          email: users.email,
-          username: users.username,
-          displayName: users.displayName,
-          createdAt: users.createdAt,
-        })
+        .returning(USER_FIELDS)
 
       const { accessToken, refreshToken } = await authRouteHelpers.issueTokens(
         user.id,
@@ -70,11 +75,11 @@ export default async function authRoutes(app: FastifyInstance) {
       const body = loginSchema.safeParse(request.body)
       if (!body.success) return reply.code(400).send({ error: body.error.flatten() })
 
-      const { email, password } = body.data
+      const { identifier, password } = body.data
       const [user] = await db
         .select()
         .from(users)
-        .where(eq(users.email, email))
+        .where(or(eq(users.email, identifier), eq(users.username, identifier)))
         .limit(1)
 
       if (!user || !(await argon2.verify(user.passwordHash, password))) {
@@ -102,6 +107,8 @@ export default async function authRoutes(app: FastifyInstance) {
           username: user.username,
           displayName: user.displayName,
           avatarUrl: user.avatarUrl,
+          isAdmin: user.isAdmin,
+          mustChangePassword: user.mustChangePassword,
           createdAt: user.createdAt,
         },
       }
@@ -142,18 +149,30 @@ export default async function authRoutes(app: FastifyInstance) {
 
   app.get('/me', async (request) => {
     const [user] = await db
-      .select({
-        id: users.id,
-        email: users.email,
-        username: users.username,
-        displayName: users.displayName,
-        avatarUrl: users.avatarUrl,
-        createdAt: users.createdAt,
-      })
+      .select(USER_FIELDS)
       .from(users)
       .where(eq(users.id, request.userId))
       .limit(1)
-
     return user
+  })
+
+  app.post('/change-password', async (request, reply) => {
+    const body = changePasswordSchema.safeParse(request.body)
+    if (!body.success) return reply.code(400).send({ error: body.error.flatten() })
+
+    const { currentPassword, newPassword } = body.data
+
+    const [user] = await db.select().from(users).where(eq(users.id, request.userId)).limit(1)
+    if (!user || !(await argon2.verify(user.passwordHash, currentPassword))) {
+      return reply.code(401).send({ error: 'Current password is incorrect' })
+    }
+
+    const passwordHash = await argon2.hash(newPassword)
+    await db
+      .update(users)
+      .set({ passwordHash, mustChangePassword: false, updatedAt: new Date() })
+      .where(eq(users.id, request.userId))
+
+    return { ok: true }
   })
 }

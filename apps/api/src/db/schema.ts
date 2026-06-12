@@ -16,8 +16,17 @@ export const users = pgTable('users', {
   passwordHash: text('password_hash').notNull(),
   displayName: text('display_name'),
   avatarUrl: text('avatar_url'),
+  isAdmin: boolean('is_admin').default(false).notNull(),
+  mustChangePassword: boolean('must_change_password').default(false).notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+})
+
+export const predefinedShops = pgTable('predefined_shops', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: text('name').notNull(),
+  color: text('color').notNull().default('#0EA5E9'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 })
 
 export const refreshTokens = pgTable('refresh_tokens', {
@@ -62,7 +71,7 @@ export const cardShares = pgTable(
       .references(() => users.id, { onDelete: 'cascade' }),
     grantedBy: uuid('granted_by')
       .notNull()
-      .references(() => users.id),
+      .references(() => users.id, { onDelete: 'cascade' }),
     canReshare: boolean('can_reshare').default(false).notNull(),
     expiresAt: timestamp('expires_at', { withTimezone: true }),
     revokedAt: timestamp('revoked_at', { withTimezone: true }),
@@ -80,9 +89,9 @@ export const invitations = pgTable(
       .references(() => cards.id, { onDelete: 'cascade' }),
     invitedBy: uuid('invited_by')
       .notNull()
-      .references(() => users.id),
+      .references(() => users.id, { onDelete: 'cascade' }),
     inviteeEmail: text('invitee_email').notNull(),
-    inviteeUserId: uuid('invitee_user_id').references(() => users.id),
+    inviteeUserId: uuid('invitee_user_id').references(() => users.id, { onDelete: 'set null' }),
     token: text('token').unique().notNull(),
     status: text('status').notNull().default('pending'),
     expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),

@@ -36,7 +36,8 @@
         {
           "cameraPermission": "Allow Memberr to access your camera to scan membership cards."
         }
-      ]
+      ],
+      "expo-asset"
     ],
     "extra": {
       "apiUrl": "https://memberr.cowjuice.xyz"

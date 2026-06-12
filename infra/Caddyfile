@@ -16,10 +16,10 @@ memberr.cowjuice.xyz {
         reverse_proxy api:3000
     }
 
-    # SPA fallback — serve index.html for all other paths
+    # SPA fallback — try path, path.html, then index.html
     handle {
         root * /srv/web
-        try_files {path} /index.html
+        try_files {path} {path}.html /index.html
         file_server
     }
 }

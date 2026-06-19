@@ -14,6 +14,9 @@ pnpm db:migrate
 pnpm --filter @memberr/api dev          # API on :3000
 pnpm --filter @memberr/mobile dev       # Expo: press w=web, a=Android, i=iOS
 
+# Native Android build (real device/emulator instead of Expo Go) — needs Android Studio/SDK
+pnpm --filter @memberr/mobile android
+
 # Type-check both apps
 pnpm type-check
 
@@ -34,7 +37,7 @@ pnpm deploy:all   # both: deploy:api then deploy:web
 
 **Monorepo:** pnpm workspaces + Turborepo. Three packages: `apps/api`, `apps/mobile`, `packages/shared`.
 
-**`packages/shared`** exports TypeScript types (`Card`, `CardShare`, `User`, etc.) and Zod validation schemas (`createCardSchema`, `shareCardSchema`, etc.). Both API and mobile import from here via `@memberr/shared`. When adding a new field to a card or user, update the schema here first.
+**`packages/shared`** exports TypeScript types (`Card`, `CardShare`, `User`, etc.) and Zod validation schemas (`createCardSchema`, `shareCardSchema`, etc.). Both API and mobile import from here via `@memberr/shared`. When adding a new field to a card or user, update the schema here first. Built to `dist/` via a root `postinstall` script (no separate `pnpm build` step needed) — but if you edit it while the API/mobile dev servers are already running, re-run `pnpm --filter @memberr/shared build` manually since they don't watch it.
 
 **`apps/api`** — Fastify 5 + Drizzle ORM + PostgreSQL 16. Route files: `auth`, `cards`, `shares`, `invitations`, `shared-with-me` — all registered under `/api/v1/`. Auth is an `onRequest` hook in `plugins/auth.ts`: every route is protected by default; mark public routes with `{ config: { public: true } }`. Access tokens are 15-minute JWTs; refresh tokens (30-day, httpOnly cookie) use token-family rotation — reuse of a revoked token invalidates the whole family.
 

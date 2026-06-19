@@ -11,6 +11,7 @@ import {
   useWindowDimensions,
 } from 'react-native'
 import { Link } from 'expo-router'
+import { Ionicons } from '@expo/vector-icons'
 import { useAuth } from '../../hooks/useAuth'
 import { ApiError } from '../../lib/api'
 import { t } from '../../lib/theme'
@@ -19,6 +20,7 @@ export default function LoginScreen() {
   const { login } = useAuth()
   const [identifier, setIdentifier] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const { width } = useWindowDimensions()
@@ -57,17 +59,27 @@ export default function LoginScreen() {
         autoComplete="username"
         returnKeyType="next"
       />
-      <TextInput
-        style={styles.input}
-        placeholder="Password"
-        placeholderTextColor={t.textSubtle}
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-        autoComplete="current-password"
-        returnKeyType="done"
-        onSubmitEditing={handleLogin}
-      />
+      <View style={styles.passwordField}>
+        <TextInput
+          style={styles.passwordInput}
+          placeholder="Password"
+          placeholderTextColor={t.textSubtle}
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry={!showPassword}
+          autoComplete="current-password"
+          returnKeyType="done"
+          onSubmitEditing={handleLogin}
+        />
+        <Pressable
+          style={styles.peekButton}
+          onPressIn={() => setShowPassword(true)}
+          onPressOut={() => setShowPassword(false)}
+          hitSlop={8}
+        >
+          <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color={t.textMuted} />
+        </Pressable>
+      </View>
       <Pressable
         style={({ pressed }) => [styles.button, (loading || pressed) && styles.buttonDisabled]}
         onPress={handleLogin}
@@ -191,6 +203,23 @@ const styles = StyleSheet.create({
     color: t.text,
     backgroundColor: t.surface,
   },
+  passwordField: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: t.border,
+    borderRadius: 10,
+    marginBottom: 10,
+    backgroundColor: t.surface,
+  },
+  passwordInput: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 16,
+    color: t.text,
+  },
+  peekButton: { paddingHorizontal: 14, paddingVertical: 14 },
   button: {
     backgroundColor: t.accent,
     borderRadius: 10,

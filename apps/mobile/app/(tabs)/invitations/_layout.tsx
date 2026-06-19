@@ -1,5 +1,6 @@
 import { Stack } from 'expo-router'
 import { t } from '../../../lib/theme'
+import { HeaderTitle } from '../../../components/HeaderTitle'
 
 export default function InvitationsLayout() {
   return (
@@ -11,7 +12,7 @@ export default function InvitationsLayout() {
         headerShadowVisible: false,
       }}
     >
-      <Stack.Screen name="index" options={{ title: 'Invitations' }} />
+      <Stack.Screen name="index" options={{ headerTitle: () => <HeaderTitle icon="mail" title="Invitations" /> }} />
     </Stack>
   )
 }

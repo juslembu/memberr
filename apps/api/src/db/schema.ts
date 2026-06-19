@@ -3,6 +3,7 @@ import {
   uuid,
   text,
   boolean,
+  integer,
   timestamp,
   uniqueIndex,
   index,
@@ -18,6 +19,7 @@ export const users = pgTable('users', {
   avatarUrl: text('avatar_url'),
   isAdmin: boolean('is_admin').default(false).notNull(),
   mustChangePassword: boolean('must_change_password').default(false).notNull(),
+  pushToken: text('push_token'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 })
@@ -55,6 +57,8 @@ export const cards = pgTable('cards', {
   color: text('color'),
   logoUrl: text('logo_url'),
   cardImageUrl: text('card_image_url'),
+  isPinned: boolean('is_pinned').default(false).notNull(),
+  expiresAt: timestamp('expires_at', { withTimezone: true }),
   isActive: boolean('is_active').default(true).notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
@@ -96,10 +100,41 @@ export const invitations = pgTable(
     token: text('token').unique().notNull(),
     status: text('status').notNull().default('pending'),
     expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    shareExpiresAt: timestamp('share_expires_at', { withTimezone: true }),
     respondedAt: timestamp('responded_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   },
   (t) => [index('invitations_token_idx').on(t.token)],
+)
+
+export const publicShares = pgTable('public_shares', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  cardId: uuid('card_id').notNull().references(() => cards.id, { onDelete: 'cascade' }),
+  ownerId: uuid('owner_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  token: text('token').unique().notNull(),
+  label: text('label'),
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  revokedAt: timestamp('revoked_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+})
+
+// Per-viewer card ordering, since the same card can show up in many users'
+// lists (the owner, plus everyone it's shared with) and each person should
+// be able to arrange their own view without affecting anyone else's.
+export const cardOrder = pgTable(
+  'card_order',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    cardId: uuid('card_id')
+      .notNull()
+      .references(() => cards.id, { onDelete: 'cascade' }),
+    sortOrder: integer('sort_order').notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [uniqueIndex('card_order_user_card_idx').on(t.userId, t.cardId)],
 )
 
 export const usersRelations = relations(users, ({ many }) => ({

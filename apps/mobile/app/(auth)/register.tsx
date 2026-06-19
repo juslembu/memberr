@@ -21,6 +21,7 @@ export default function RegisterScreen() {
   const [username, setUsername] = useState('')
   const [displayName, setDisplayName] = useState('')
   const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const { width } = useWindowDimensions()
@@ -29,6 +30,10 @@ export default function RegisterScreen() {
   async function handleRegister() {
     if (!email || !username || !password) {
       setError('Please fill in all required fields')
+      return
+    }
+    if (password !== confirmPassword) {
+      setError('Passwords do not match')
       return
     }
     setError('')
@@ -85,6 +90,16 @@ export default function RegisterScreen() {
         placeholderTextColor={t.textSubtle}
         value={password}
         onChangeText={setPassword}
+        secureTextEntry
+        autoComplete="new-password"
+        returnKeyType="next"
+      />
+      <TextInput
+        style={styles.input}
+        placeholder="Confirm password"
+        placeholderTextColor={t.textSubtle}
+        value={confirmPassword}
+        onChangeText={setConfirmPassword}
         secureTextEntry
         autoComplete="new-password"
         returnKeyType="done"

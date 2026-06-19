@@ -1,5 +1,6 @@
 import { Stack } from 'expo-router'
 import { t } from '../../../lib/theme'
+import { HeaderTitle } from '../../../components/HeaderTitle'
 
 export default function AccountLayout() {
   return (
@@ -11,7 +12,7 @@ export default function AccountLayout() {
         headerShadowVisible: false,
       }}
     >
-      <Stack.Screen name="index" options={{ title: 'Account' }} />
+      <Stack.Screen name="index" options={{ headerTitle: () => <HeaderTitle icon="person-circle" title="Account" /> }} />
     </Stack>
   )
 }

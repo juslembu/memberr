@@ -1,7 +1,7 @@
 import { FastifyInstance } from 'fastify'
 import { db } from '../db/client.js'
 import { cards } from '../db/schema.js'
-import { eq, and } from 'drizzle-orm'
+import { eq, and, desc } from 'drizzle-orm'
 import { createCardSchema, updateCardSchema } from '@memberr/shared'
 
 export default async function cardRoutes(app: FastifyInstance) {
@@ -10,16 +10,21 @@ export default async function cardRoutes(app: FastifyInstance) {
       .select()
       .from(cards)
       .where(and(eq(cards.ownerId, request.userId), eq(cards.isActive, true)))
-      .orderBy(cards.createdAt)
+      .orderBy(desc(cards.isPinned), cards.createdAt)
   })
 
   app.post('/', async (request, reply) => {
     const body = createCardSchema.safeParse(request.body)
     if (!body.success) return reply.code(400).send({ error: body.error.flatten() })
 
+    const { expiresAt, ...rest } = body.data
     const [card] = await db
       .insert(cards)
-      .values({ ...body.data, ownerId: request.userId })
+      .values({
+        ...rest,
+        ownerId: request.userId,
+        expiresAt: expiresAt ? new Date(expiresAt) : null,
+      })
       .returning()
 
     return reply.code(201).send(card)
@@ -53,9 +58,14 @@ export default async function cardRoutes(app: FastifyInstance) {
     if (!card) return reply.code(404).send({ error: 'Not found' })
     if (card.ownerId !== request.userId) return reply.code(403).send({ error: 'Forbidden' })
 
+    const { expiresAt, ...rest } = body.data
     const [updated] = await db
       .update(cards)
-      .set({ ...body.data, updatedAt: new Date() })
+      .set({
+        ...rest,
+        ...(expiresAt !== undefined ? { expiresAt: expiresAt ? new Date(expiresAt) : null } : {}),
+        updatedAt: new Date(),
+      })
       .where(eq(cards.id, id))
       .returning()
 

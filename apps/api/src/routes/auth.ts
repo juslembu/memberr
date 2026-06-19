@@ -3,7 +3,7 @@ import { db } from '../db/client.js'
 import { users } from '../db/schema.js'
 import { eq, or } from 'drizzle-orm'
 import * as argon2 from 'argon2'
-import { registerSchema, loginSchema, changePasswordSchema } from '@memberr/shared'
+import { registerSchema, loginSchema, changePasswordSchema, updateProfileSchema } from '@memberr/shared'
 import { authRouteHelpers } from '../plugins/auth.js'
 
 const REFRESH_COOKIE = 'memberr_refresh'
@@ -174,5 +174,60 @@ export default async function authRoutes(app: FastifyInstance) {
       .where(eq(users.id, request.userId))
 
     return { ok: true }
+  })
+
+  app.patch('/push-token', async (request, reply) => {
+    const { token } = request.body as { token: string | null }
+    await db
+      .update(users)
+      .set({ pushToken: token ?? null })
+      .where(eq(users.id, request.userId))
+    return { ok: true }
+  })
+
+  app.patch('/profile', async (request, reply) => {
+    const body = updateProfileSchema.safeParse(request.body)
+    if (!body.success) return reply.code(400).send({ error: body.error.flatten() })
+
+    const { displayName, username, email } = body.data
+
+    if (username) {
+      const [existing] = await db
+        .select({ id: users.id })
+        .from(users)
+        .where(eq(users.username, username))
+        .limit(1)
+      if (existing && existing.id !== request.userId) {
+        return reply.code(409).send({ error: 'Username already taken' })
+      }
+    }
+
+    if (email) {
+      const [existing] = await db
+        .select({ id: users.id })
+        .from(users)
+        .where(eq(users.email, email))
+        .limit(1)
+      if (existing && existing.id !== request.userId) {
+        return reply.code(409).send({ error: 'Email already in use' })
+      }
+    }
+
+    const updates: Record<string, unknown> = { updatedAt: new Date() }
+    if (displayName !== undefined) updates.displayName = displayName
+    if (username) updates.username = username
+    if (email) updates.email = email
+
+    const [updated] = await db
+      .select(USER_FIELDS)
+      .from(users)
+      .where(eq(users.id, request.userId))
+      .limit(1)
+      .then(async () => {
+        await db.update(users).set(updates).where(eq(users.id, request.userId))
+        return db.select(USER_FIELDS).from(users).where(eq(users.id, request.userId)).limit(1)
+      })
+
+    return updated
   })
 }

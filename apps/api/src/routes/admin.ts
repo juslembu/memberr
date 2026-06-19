@@ -1,8 +1,17 @@
 import { FastifyInstance } from 'fastify'
+import { randomBytes } from 'crypto'
+import * as argon2 from 'argon2'
 import { db } from '../db/client.js'
 import { users, predefinedShops } from '../db/schema.js'
 import { eq, ne, asc } from 'drizzle-orm'
-import { createShopSchema } from '@memberr/shared'
+import { createShopSchema, adminResetPasswordSchema } from '@memberr/shared'
+
+const TEMP_PASSWORD_CHARSET = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789'
+
+function generateTempPassword(length = 12): string {
+  const bytes = randomBytes(length)
+  return Array.from(bytes, (b) => TEMP_PASSWORD_CHARSET[b % TEMP_PASSWORD_CHARSET.length]).join('')
+}
 
 export default async function adminRoutes(app: FastifyInstance) {
   app.addHook('preHandler', async (request, reply) => {
@@ -27,6 +36,24 @@ export default async function adminRoutes(app: FastifyInstance) {
       })
       .from(users)
       .orderBy(asc(users.createdAt))
+  })
+
+  app.post('/users/:id/reset-password', async (request, reply) => {
+    const { id } = request.params as { id: string }
+    const body = adminResetPasswordSchema.safeParse(request.body)
+    if (!body.success) return reply.code(400).send({ error: body.error.flatten() })
+
+    const [target] = await db.select({ id: users.id }).from(users).where(eq(users.id, id)).limit(1)
+    if (!target) return reply.code(404).send({ error: 'User not found' })
+
+    const newPassword = body.data.newPassword ?? generateTempPassword()
+    const passwordHash = await argon2.hash(newPassword)
+    await db
+      .update(users)
+      .set({ passwordHash, mustChangePassword: true, updatedAt: new Date() })
+      .where(eq(users.id, id))
+
+    return { ok: true, temporaryPassword: newPassword }
   })
 
   app.delete('/users/:id', async (request, reply) => {

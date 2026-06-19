@@ -80,6 +80,7 @@ export default function AddCardScreen() {
   const [notes, setNotes] = useState('')
   const [color, setColor] = useState(CARD_COLORS[0])
   const [logoUrl, setLogoUrl] = useState<string | null>(null)
+  const [expiresAt, setExpiresAt] = useState('')
   const [saving, setSaving] = useState(false)
   const [detecting, setDetecting] = useState(false)
   const [detectError, setDetectError] = useState('')
@@ -87,6 +88,7 @@ export default function AddCardScreen() {
   const [uploadedImageUri, setUploadedImageUri] = useState<string | null>(null)
   const [cardDataUrl, setCardDataUrl] = useState<string | null>(null)
   const [predefinedShops, setPredefinedShops] = useState<PredefinedShop[]>([])
+  const [selectedShopId, setSelectedShopId] = useState<string | null>(null)
   const scannedOnce = useRef(false)
 
   useFocusEffect(useCallback(() => {
@@ -101,8 +103,10 @@ export default function AddCardScreen() {
     setDetecting(false)
     setDetectError('')
     setShowTypePicker(false)
+    setExpiresAt('')
     setUploadedImageUri(null)
     setCardDataUrl(null)
+    setSelectedShopId(null)
     scannedOnce.current = false
     api.shops.list().then(setPredefinedShops).catch(() => {})
   }, []))
@@ -148,6 +152,7 @@ export default function AddCardScreen() {
     if (!storeName.trim() || !cardNumber.trim()) return
     setSaving(true)
     try {
+      const parsedExpiry = expiresAt.trim() ? new Date(expiresAt.trim()) : null
       await api.cards.create({
         storeName: storeName.trim(),
         cardNumber: cardNumber.trim(),
@@ -156,6 +161,7 @@ export default function AddCardScreen() {
         color,
         logoUrl: logoUrl ?? undefined,
         cardImageUrl: cardDataUrl ?? undefined,
+        expiresAt: parsedExpiry?.toISOString() ?? undefined,
       })
       router.replace('/(tabs)/my-cards')
     } catch (err) {
@@ -256,31 +262,44 @@ export default function AddCardScreen() {
           <View style={styles.chipsSection}>
             <Text style={styles.chipsLabel}>Quick select</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsRow}>
-              {predefinedShops.map((shop) => (
-                <Pressable
-                  key={shop.id}
-                  style={styles.chip}
-                  onPress={() => { setStoreName(shop.name); setColor(shop.color); setLogoUrl(shop.logoUrl ?? null) }}
-                >
-                  {shop.logoUrl ? (
-                    <Image source={{ uri: shop.logoUrl }} style={styles.chipLogo} resizeMode="contain" />
-                  ) : (
-                    <View style={[styles.chipDot, { backgroundColor: shop.color }]} />
-                  )}
-                  <Text style={styles.chipText}>{shop.name}</Text>
-                </Pressable>
-              ))}
+              {predefinedShops.map((shop) => {
+                const active = selectedShopId === shop.id
+                return (
+                  <Pressable
+                    key={shop.id}
+                    style={[styles.chip, active && styles.chipActive]}
+                    onPress={() => {
+                      if (active) {
+                        setSelectedShopId(null)
+                      } else {
+                        setSelectedShopId(shop.id)
+                        setStoreName(shop.name)
+                        setColor(shop.color)
+                        setLogoUrl(shop.logoUrl ?? null)
+                      }
+                    }}
+                  >
+                    {shop.logoUrl ? (
+                      <Image source={{ uri: shop.logoUrl }} style={styles.chipLogo} resizeMode="contain" />
+                    ) : (
+                      <View style={[styles.chipDot, { backgroundColor: shop.color }]} />
+                    )}
+                    <Text style={[styles.chipText, active && styles.chipTextActive]}>{shop.name}</Text>
+                  </Pressable>
+                )
+              })}
             </ScrollView>
           </View>
         )}
 
         <Text style={styles.label}>Shop name *</Text>
         <TextInput
-          style={styles.input}
+          style={[styles.input, selectedShopId && styles.inputLocked]}
           value={storeName}
-          onChangeText={setStoreName}
+          onChangeText={(v) => { setStoreName(v); setSelectedShopId(null) }}
           placeholder="e.g. Emart, Doremart, Everise"
           placeholderTextColor="#9ca3af"
+          editable={!selectedShopId}
         />
 
         <Text style={styles.label}>Card / membership number *</Text>
@@ -319,6 +338,17 @@ export default function AddCardScreen() {
           placeholderTextColor="#9ca3af"
           multiline
           numberOfLines={3}
+        />
+
+        <Text style={styles.label}>Expiry date (optional)</Text>
+        <TextInput
+          style={styles.input}
+          value={expiresAt}
+          onChangeText={setExpiresAt}
+          placeholder="YYYY-MM-DD"
+          placeholderTextColor="#9ca3af"
+          autoCapitalize="none"
+          autoCorrect={false}
         />
 
         <View style={styles.actions}>
@@ -405,9 +435,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     ...(Platform.OS === 'web' ? { cursor: 'pointer' } as any : {}),
   },
+  chipActive: {
+    backgroundColor: '#E0F2FE',
+    borderColor: '#0EA5E9',
+  },
   chipDot: { width: 14, height: 14, borderRadius: 7 },
   chipLogo: { width: 20, height: 20, borderRadius: 4 },
   chipText: { fontSize: 14, fontWeight: '600', color: '#374151' },
+  chipTextActive: { color: '#0EA5E9' },
   form: { padding: 24 },
   errorBox: { backgroundColor: '#fef2f2', borderRadius: 10, padding: 12, marginBottom: 12 },
   errorText: { color: '#dc2626', fontSize: 14 },
@@ -415,6 +450,10 @@ const styles = StyleSheet.create({
   input: {
     borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 10,
     paddingHorizontal: 14, paddingVertical: 12, fontSize: 16, color: '#111827', backgroundColor: '#fff',
+  },
+  inputLocked: {
+    backgroundColor: '#f3f4f6',
+    color: '#6b7280',
   },
   textarea: { minHeight: 80, textAlignVertical: 'top' },
   picker: {

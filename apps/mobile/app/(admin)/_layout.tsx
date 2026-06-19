@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { Stack, router } from 'expo-router'
 import { useAuth } from '../../hooks/useAuth'
 import { t } from '../../lib/theme'
+import { HeaderTitle } from '../../components/HeaderTitle'
 
 export default function AdminLayout() {
   const { user } = useAuth()
@@ -21,9 +22,9 @@ export default function AdminLayout() {
         headerShadowVisible: false,
       }}
     >
-      <Stack.Screen name="index" options={{ title: 'Admin Panel' }} />
-      <Stack.Screen name="users" options={{ title: 'Users' }} />
-      <Stack.Screen name="shops" options={{ title: 'Predefined Shops' }} />
+      <Stack.Screen name="index" options={{ headerTitle: () => <HeaderTitle icon="shield-checkmark" title="Admin Panel" /> }} />
+      <Stack.Screen name="users" options={{ headerTitle: () => <HeaderTitle icon="people" title="Users" /> }} />
+      <Stack.Screen name="shops" options={{ headerTitle: () => <HeaderTitle icon="storefront" title="Predefined Shops" /> }} />
     </Stack>
   )
 }

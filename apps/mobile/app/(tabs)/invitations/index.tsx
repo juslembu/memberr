@@ -12,6 +12,7 @@ import { useFocusEffect } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { api, ApiError } from '../../../lib/api'
 import { t } from '../../../lib/theme'
+import { triggerBadgeRefresh } from '../../../lib/invitationsBadge'
 import type { Invitation } from '@memberr/shared'
 
 export default function InvitationsScreen() {
@@ -38,6 +39,7 @@ export default function InvitationsScreen() {
   async function handleAccept(invitation: Invitation) {
     try {
       await api.invitations.accept(invitation.id)
+      triggerBadgeRefresh()
       await load()
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Failed to accept invitation')
@@ -47,6 +49,7 @@ export default function InvitationsScreen() {
   async function handleDecline(invitation: Invitation) {
     try {
       await api.invitations.decline(invitation.id)
+      triggerBadgeRefresh()
       await load()
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Failed to decline invitation')

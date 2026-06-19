@@ -5,6 +5,7 @@ import {
   FlatList,
   StyleSheet,
   TouchableOpacity,
+  TextInput,
   Modal,
   ActivityIndicator,
   RefreshControl,
@@ -29,6 +30,12 @@ export default function AdminUsersScreen() {
   const [error, setError] = useState<string | null>(null)
   const [confirmId, setConfirmId] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
+  const [resetId, setResetId] = useState<string | null>(null)
+  const [customPassword, setCustomPassword] = useState('')
+  const [resetting, setResetting] = useState(false)
+  const [resetError, setResetError] = useState('')
+  const [resetResult, setResetResult] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
 
   const load = useCallback(async (isRefresh = false) => {
     if (!isRefresh) setLoading(true)
@@ -61,6 +68,45 @@ export default function AdminUsersScreen() {
     }
   }
 
+  function openResetModal(id: string) {
+    setResetId(id)
+    setCustomPassword('')
+    setResetError('')
+    setResetResult(null)
+    setCopied(false)
+  }
+
+  function closeResetModal() {
+    setResetId(null)
+    setCustomPassword('')
+    setResetError('')
+    setResetResult(null)
+    setCopied(false)
+  }
+
+  async function handleResetPassword() {
+    if (!resetId) return
+    setResetting(true)
+    setResetError('')
+    try {
+      const result = await api.admin.resetPassword(resetId, customPassword.trim() || undefined)
+      setResetResult(result.temporaryPassword)
+    } catch (err) {
+      setResetError(err instanceof ApiError ? err.message : 'Failed to reset password')
+    } finally {
+      setResetting(false)
+    }
+  }
+
+  async function copyResetPassword() {
+    if (!resetResult) return
+    if (Platform.OS === 'web') {
+      await navigator.clipboard.writeText(resetResult).catch(() => {})
+    }
+    setCopied(true)
+    setTimeout(() => setCopied(false), 3000)
+  }
+
   if (loading) {
     return (
       <View style={styles.center}>
@@ -70,6 +116,7 @@ export default function AdminUsersScreen() {
   }
 
   const confirmUser = users.find((u) => u.id === confirmId)
+  const resetUser = users.find((u) => u.id === resetId)
 
   return (
     <View style={styles.container}>
@@ -119,6 +166,12 @@ export default function AdminUsersScreen() {
                   Joined {new Date(item.createdAt).toLocaleDateString()}
                 </Text>
               </View>
+              <TouchableOpacity
+                style={[styles.resetBtn, webCursor]}
+                onPress={() => openResetModal(item.id)}
+              >
+                <Ionicons name="key-outline" size={18} color={t.accent} />
+              </TouchableOpacity>
               {!isSelf && (
                 <TouchableOpacity
                   style={[styles.deleteBtn, webCursor]}
@@ -161,6 +214,75 @@ export default function AdminUsersScreen() {
                 <Text style={styles.confirmText}>{deleting ? 'Deleting…' : 'Delete'}</Text>
               </TouchableOpacity>
             </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={!!resetId}
+        transparent
+        animationType="fade"
+        onRequestClose={closeResetModal}
+      >
+        <View style={styles.overlay}>
+          <View style={styles.dialog}>
+            {resetResult ? (
+              <>
+                <View style={styles.resetSuccessIconWrap}>
+                  <Ionicons name="checkmark-circle" size={32} color="#16A34A" />
+                </View>
+                <Text style={styles.dialogTitle}>Password reset</Text>
+                <Text style={styles.dialogBody}>
+                  Share this temporary password with{' '}
+                  <Text style={{ fontWeight: '700' }}>@{resetUser?.username}</Text> yourself —
+                  they'll be required to change it on next login.
+                </Text>
+                <View style={styles.tempPasswordRow}>
+                  <Text style={styles.tempPasswordText} selectable>{resetResult}</Text>
+                  <TouchableOpacity style={[styles.copyBtn, webCursor]} onPress={copyResetPassword}>
+                    <Ionicons name={copied ? 'checkmark' : 'copy-outline'} size={16} color={t.accent} />
+                  </TouchableOpacity>
+                </View>
+                <TouchableOpacity style={[styles.confirmBtn, webCursor, { marginTop: 16 }]} onPress={closeResetModal}>
+                  <Text style={styles.confirmText}>Done</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <>
+                <Text style={styles.dialogTitle}>Reset password</Text>
+                <Text style={styles.dialogBody}>
+                  Set a new password for <Text style={{ fontWeight: '700' }}>@{resetUser?.username}</Text>,
+                  or leave blank to generate a random one. They'll be required to change it on next login.
+                </Text>
+                <TextInput
+                  style={styles.passwordInput}
+                  placeholder="New password (optional)"
+                  placeholderTextColor={t.textSubtle}
+                  value={customPassword}
+                  onChangeText={setCustomPassword}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  secureTextEntry={false}
+                />
+                {resetError ? <Text style={styles.resetErrorText}>{resetError}</Text> : null}
+                <View style={styles.dialogActions}>
+                  <TouchableOpacity
+                    style={[styles.cancelBtn, webCursor]}
+                    onPress={closeResetModal}
+                    disabled={resetting}
+                  >
+                    <Text style={styles.cancelText}>Cancel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.confirmBtn, resetting && styles.btnDisabled, webCursor]}
+                    onPress={handleResetPassword}
+                    disabled={resetting}
+                  >
+                    <Text style={styles.confirmText}>{resetting ? 'Resetting…' : 'Reset'}</Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
           </View>
         </View>
       </Modal>
@@ -217,6 +339,41 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginLeft: 8,
   },
+  resetBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    backgroundColor: t.accentBg,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 8,
+  },
+  passwordInput: {
+    borderWidth: 1,
+    borderColor: t.border,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 15,
+    color: t.text,
+    marginBottom: 16,
+  },
+  resetErrorText: { color: t.errorText, fontSize: 13, marginBottom: 12, marginTop: -8 },
+  resetSuccessIconWrap: { alignItems: 'center', marginBottom: 8 },
+  tempPasswordRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: t.bg,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: t.border,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginTop: 4,
+    gap: 10,
+  },
+  tempPasswordText: { flex: 1, fontSize: 17, fontWeight: '700', color: t.text, letterSpacing: 1 },
+  copyBtn: { padding: 4 },
 
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center', padding: 24 },
   dialog: {

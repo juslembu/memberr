@@ -45,6 +45,11 @@ pnpm deploy:all   # both: deploy:api then deploy:web
 - `lib/api.ts` — all API calls; `fetchWithAuth` handles 401→refresh→retry automatically; only sets `Content-Type: application/json` when a request body is present (omitting it on bodyless DELETE/GET avoids Fastify 400s)
 - Token storage: `localStorage` on web, `expo-secure-store` on native
 
+**Self-hosting / server URL (`lib/serverUrl.ts`)** — Memberr is meant to be self-hostable, so the API base URL is resolved at runtime, not hardcoded:
+- **Web**: same-origin in production (Caddy reverse-proxies `/api/*` on the same domain — see `infra/Caddyfile`), so any self-hosted deploy works with zero config. Special-cased to `http://localhost:3000` when `hostname` is `localhost`/`127.0.0.1` so the Metro dev server (`:8081`) still talks to a locally-run API instead of trying to hit its own dev-server origin.
+- **Native**: no fixed origin (it's a distributable binary), so the user enters a server URL once in `app/server-setup.tsx`, persisted via `expo-secure-store`. `app/_layout.tsx` gates the entire app behind this screen on native until a URL is set (`hasServerUrl()`); `app.json`'s `extra.apiUrl` is only used as the pre-filled suggestion on that screen, not a hard default. Changeable later from Account → Server (logs the user out, since tokens belong to the old server).
+- Any UI that builds a shareable link (invite links, public card links in `my-cards/[id].tsx`) must use `getServerUrl()`, not a hardcoded domain — these links point at whichever server the current user is connected to.
+
 **Web platform gotchas** — the mobile app runs as a web SPA (`output: "single"` in `app.json`). Several expo/RN APIs don't work on web and require platform-split files (Metro resolves `.web.tsx` / `.web.ts` automatically):
 - `expo-camera` and `expo-image-picker` both call `createPermissionHook` at module load time, which doesn't exist in the web bundle → use `BarcodeScanner.web.tsx` (@zxing/browser + getUserMedia) and `lib/imagePicker.web.ts` (HTML `<input type="file">`) instead
 - `expo-secure-store` — not available on web; use `localStorage`

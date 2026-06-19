@@ -37,6 +37,14 @@
           "cameraPermission": "Allow Memberr to access your camera to scan membership cards."
         }
       ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/icon.png",
+          "color": "#0EA5E9",
+          "sounds": []
+        }
+      ],
       "expo-asset",
       [
         "expo-image-picker",

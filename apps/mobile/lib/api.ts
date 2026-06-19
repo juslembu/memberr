@@ -1,12 +1,14 @@
 import * as SecureStore from 'expo-secure-store'
 import { Platform } from 'react-native'
-import Constants from 'expo-constants'
+import { getServerUrl } from './serverUrl'
 import type {
   User,
   Card,
   CardShare,
   Invitation,
   SharedCard,
+  PublicShare,
+  PublicCardView,
   PredefinedShop,
   CreateCardInput,
   UpdateCardInput,
@@ -14,12 +16,9 @@ import type {
   RegisterInput,
   LoginInput,
   ChangePasswordInput,
+  UpdateProfileInput,
   CreateShopInput,
 } from '@memberr/shared'
-
-const API_URL: string =
-  (Constants.expoConfig?.extra?.apiUrl as string | undefined) ??
-  'http://localhost:3000'
 
 const ACCESS_TOKEN_KEY = 'memberr_access_token'
 
@@ -39,6 +38,7 @@ async function clearAccessToken(): Promise<void> {
 }
 
 async function fetchWithAuth(path: string, options: RequestInit = {}): Promise<Response> {
+  const API_URL = await getServerUrl()
   const token = await getAccessToken()
   const hasBody = options.body != null
   const headers: Record<string, string> = {
@@ -92,6 +92,7 @@ async function json<T>(res: Response): Promise<T> {
 export const api = {
   auth: {
     async register(data: RegisterInput): Promise<{ user: User; accessToken: string }> {
+      const API_URL = await getServerUrl()
       const res = await fetch(`${API_URL}/api/v1/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -104,6 +105,7 @@ export const api = {
     },
 
     async login(data: LoginInput): Promise<{ user: User; accessToken: string }> {
+      const API_URL = await getServerUrl()
       const res = await fetch(`${API_URL}/api/v1/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -130,6 +132,20 @@ export const api = {
         body: JSON.stringify(data),
       }))
     },
+
+    async updateProfile(data: UpdateProfileInput): Promise<User> {
+      return json<User>(await fetchWithAuth('/api/v1/auth/profile', {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }))
+    },
+
+    async savePushToken(token: string): Promise<void> {
+      await fetchWithAuth('/api/v1/auth/push-token', {
+        method: 'PATCH',
+        body: JSON.stringify({ token }),
+      })
+    },
   },
 
   shops: {
@@ -145,6 +161,13 @@ export const api = {
 
     async deleteUser(id: string): Promise<void> {
       await json(await fetchWithAuth(`/api/v1/admin/users/${id}`, { method: 'DELETE' }))
+    },
+
+    async resetPassword(id: string, newPassword?: string): Promise<{ ok: true; temporaryPassword: string }> {
+      return json(await fetchWithAuth(`/api/v1/admin/users/${id}/reset-password`, {
+        method: 'POST',
+        body: JSON.stringify({ newPassword }),
+      }))
     },
 
     async listShops(): Promise<PredefinedShop[]> {
@@ -207,10 +230,14 @@ export const api = {
       return json<CardShare[]>(await fetchWithAuth(`/api/v1/cards/${cardId}/shares`))
     },
 
+    async listPending(cardId: string): Promise<Invitation[]> {
+      return json<Invitation[]>(await fetchWithAuth(`/api/v1/cards/${cardId}/invitations`))
+    },
+
     async share(
       cardId: string,
       data: ShareCardInput,
-    ): Promise<{ type: 'share' | 'invitation'; share?: CardShare; invitation?: Invitation }> {
+    ): Promise<{ type: 'invitation'; invitation?: Invitation }> {
       return json(
         await fetchWithAuth(`/api/v1/cards/${cardId}/shares`, {
           method: 'POST',
@@ -225,6 +252,18 @@ export const api = {
   },
 
   invitations: {
+    async getByToken(token: string): Promise<Invitation> {
+      return json<Invitation>(await fetchWithAuth(`/api/v1/invitations/token/${token}`))
+    },
+
+    async acceptByToken(token: string): Promise<void> {
+      await json(await fetchWithAuth(`/api/v1/invitations/token/${token}/accept`, { method: 'POST' }))
+    },
+
+    async declineByToken(token: string): Promise<void> {
+      await json(await fetchWithAuth(`/api/v1/invitations/token/${token}/decline`, { method: 'POST' }))
+    },
+
     async incoming(): Promise<Invitation[]> {
       return json<Invitation[]>(await fetchWithAuth('/api/v1/invitations/incoming'))
     },
@@ -233,12 +272,12 @@ export const api = {
       return json<Invitation[]>(await fetchWithAuth('/api/v1/invitations/outgoing'))
     },
 
-    async accept(token: string): Promise<void> {
-      await fetchWithAuth(`/api/v1/invitations/token/${token}/accept`, { method: 'POST' })
+    async accept(id: string): Promise<void> {
+      await json(await fetchWithAuth(`/api/v1/invitations/${id}/accept`, { method: 'POST' }))
     },
 
-    async decline(token: string): Promise<void> {
-      await fetchWithAuth(`/api/v1/invitations/token/${token}/decline`, { method: 'POST' })
+    async decline(id: string): Promise<void> {
+      await json(await fetchWithAuth(`/api/v1/invitations/${id}/decline`, { method: 'POST' }))
     },
 
     async cancel(id: string): Promise<void> {
@@ -253,6 +292,42 @@ export const api = {
 
     async get(shareId: string): Promise<SharedCard> {
       return json<SharedCard>(await fetchWithAuth(`/api/v1/shared-with-me/${shareId}`))
+    },
+  },
+
+  cardOrder: {
+    async get(): Promise<Record<string, number>> {
+      return json(await fetchWithAuth('/api/v1/card-order'))
+    },
+
+    async save(cardIds: string[]): Promise<void> {
+      await json(await fetchWithAuth('/api/v1/card-order', {
+        method: 'PUT',
+        body: JSON.stringify({ cardIds }),
+      }))
+    },
+  },
+
+  publicShares: {
+    async getPublic(token: string): Promise<PublicCardView> {
+      const API_URL = await getServerUrl()
+      const res = await fetch(`${API_URL}/api/v1/public/token/${token}`)
+      return json<PublicCardView>(res)
+    },
+
+    async list(cardId: string): Promise<PublicShare[]> {
+      return json<PublicShare[]>(await fetchWithAuth(`/api/v1/cards/${cardId}/public-shares`))
+    },
+
+    async create(cardId: string, data: { expiresAt: string; label?: string }): Promise<PublicShare> {
+      return json<PublicShare>(await fetchWithAuth(`/api/v1/cards/${cardId}/public-shares`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }))
+    },
+
+    async revoke(cardId: string, shareId: string): Promise<void> {
+      await json(await fetchWithAuth(`/api/v1/cards/${cardId}/public-shares/${shareId}`, { method: 'DELETE' }))
     },
   },
 }

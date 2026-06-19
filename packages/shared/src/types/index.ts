@@ -65,6 +65,8 @@ export interface Card {
   color: string | null
   logoUrl: string | null
   cardImageUrl: string | null
+  isPinned: boolean
+  expiresAt: string | null
   isActive: boolean
   createdAt: string
   updatedAt: string
@@ -90,12 +92,35 @@ export interface Invitation {
   invitedBy: string
   inviteeEmail: string
   inviteeUserId: string | null
+  token?: string
   status: InvitationStatus
+  shareExpiresAt?: string | null
   expiresAt: string
   respondedAt: string | null
   createdAt: string
   card?: Pick<Card, 'id' | 'storeName' | 'barcodeType' | 'color' | 'logoUrl'>
   invitedByUser?: Pick<User, 'id' | 'username' | 'displayName' | 'avatarUrl'>
+}
+
+export interface PublicShare {
+  id: string
+  cardId: string
+  ownerId: string
+  token: string
+  label: string | null
+  expiresAt: string
+  revokedAt: string | null
+  createdAt: string
+}
+
+export interface PublicCardView {
+  shareLabel: string | null
+  shareExpiresAt: string
+  storeName: string
+  cardNumber: string
+  barcodeType: BarcodeType
+  color: string | null
+  logoUrl: string | null
 }
 
 export interface SharedCard {

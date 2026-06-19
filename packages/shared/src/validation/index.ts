@@ -39,19 +39,45 @@ export const createCardSchema = z.object({
     .optional(),
   logoUrl: z.string().optional(),
   cardImageUrl: z.string().optional(),
+  isPinned: z.boolean().optional(),
+  expiresAt: z.string().nullable().optional(),
 })
 
 export const updateCardSchema = createCardSchema.partial()
 
 export const shareCardSchema = z.object({
-  email: z.string().email(),
+  identifier: z.string().min(1),
+  canReshare: z.boolean().optional(),
   expiresAt: z.string().datetime().optional(),
+})
+
+export const createPublicShareSchema = z.object({
+  expiresAt: z.string().datetime(),
+  label: z.string().max(60).optional(),
+})
+
+export const adminResetPasswordSchema = z.object({
+  newPassword: z.string().min(8, 'At least 8 characters').max(128).optional(),
+})
+
+export const updateProfileSchema = z.object({
+  displayName: z.string().min(1).max(60).nullable().optional(),
+  username: z
+    .string()
+    .min(3)
+    .max(30)
+    .regex(/^[a-zA-Z0-9_-]+$/, 'Only letters, numbers, underscores, hyphens')
+    .optional(),
+  email: z.string().email().optional(),
 })
 
 export type RegisterInput = z.infer<typeof registerSchema>
 export type LoginInput = z.infer<typeof loginSchema>
 export type ChangePasswordInput = z.infer<typeof changePasswordSchema>
+export type UpdateProfileInput = z.infer<typeof updateProfileSchema>
 export type CreateShopInput = z.infer<typeof createShopSchema>
 export type CreateCardInput = z.infer<typeof createCardSchema>
 export type UpdateCardInput = z.infer<typeof updateCardSchema>
 export type ShareCardInput = z.infer<typeof shareCardSchema>
+export type CreatePublicShareInput = z.infer<typeof createPublicShareSchema>
+export type AdminResetPasswordInput = z.infer<typeof adminResetPasswordSchema>

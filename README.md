@@ -3,6 +3,9 @@
 Share membership cards with friends and family. Self-hostable — runs on web, iOS, and Android,
 all talking to a server you control.
 
+> **Note:** This project is vibe-coded — built largely with AI assistance and light human review.
+> Treat it accordingly before relying on it for anything sensitive.
+
 ## Stack
 
 - **Frontend**: Expo (React Native + Web) — one codebase for all platforms
@@ -69,7 +72,7 @@ pnpm --filter @memberr/mobile dev
 
 ## Production deployment
 
-**First-time setup, on your server:**
+**First-time setup, on your server (common to both options below):**
 ```bash
 git clone <your-fork-or-this-repo-url> memberr
 cd memberr
@@ -80,12 +83,28 @@ cp .env.example .env
 Edit `infra/Caddyfile` and replace the domain at the top (currently `memberr.cowjuice.xyz`,
 this deployment's own domain) with yours.
 
+You still need the repo cloned either way — `docker-compose.yml`, the Caddyfile, and `.env.example`
+all live in it — but you have a choice for the API container itself:
+
+### Option A: pull the prebuilt image (fastest, no Node/build toolchain needed)
+
+Every push to `main` publishes `ghcr.io/juslembu/memberr-api` (multi-arch: amd64 + arm64, so this
+works on a Raspberry Pi or an ARM VPS too). Skip `pnpm install` entirely for this path:
+```bash
+docker compose pull api
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+docker compose exec api node dist/db/migrate.js
+```
+
+### Option B: build from source (if you've modified the code)
 ```bash
 pnpm install
-docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+pnpm db:migrate
 ```
-Point your domain's DNS A record at the server's IP before or shortly after this — Caddy will
-automatically request a Let's Encrypt certificate once it can verify the domain.
+
+Either way, point your domain's DNS A record at the server's IP before or shortly after this —
+Caddy will automatically request a Let's Encrypt certificate once it can verify the domain.
 
 **Deploying updates after the initial setup** — always use these, never a plain `docker compose
 restart` (it won't pick up source/build changes):
@@ -94,12 +113,16 @@ pnpm deploy:api    # API only: rebuilds the image, recreates the API container
 pnpm deploy:web    # frontend only: Expo web export, recreates Caddy (which serves the export)
 pnpm deploy:all    # both, in the right order
 ```
+If you're on Option A, `docker compose pull api && docker compose -f docker-compose.yml -f
+docker-compose.prod.yml up -d --force-recreate api` is the equivalent for picking up a new image.
 
 ### Database migrations in production
 ```bash
 pnpm db:migrate
 ```
-Run this after pulling changes that include new files under `apps/api/src/db/migrations/`.
+Run this after pulling changes that include new files under `apps/api/src/db/migrations/`. If
+you're running the prebuilt image without a local Node/pnpm toolchain (Option A), run migrations
+inside the container instead: `docker compose exec api node dist/db/migrate.js`.
 
 ## Server-side troubleshooting
 
@@ -115,6 +138,9 @@ These are real issues hit while setting this project up — saving you the troub
   ```powershell
   Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
   ```
+- **`docker compose pull api` fails with "unauthorized" / "denied"** (maintainers only) — GHCR
+  packages default to private. After the first successful `docker-publish` workflow run, go to the
+  repo's Packages tab and set `memberr-api`'s visibility to public.
 
 ---
 
@@ -123,6 +149,13 @@ These are real issues hit while setting this project up — saving you the troub
 ## Web
 No setup needed — open your Memberr server's URL in a browser (e.g. `https://memberr.yourdomain.com`).
 The web app talks to the API on the same domain automatically.
+
+## Android (prebuilt APK)
+Don't want to build anything? Grab the latest signed release APK from
+[GitHub Releases](https://github.com/juslembu/memberr/releases/latest) and sideload it. On first
+launch, enter your Memberr server's URL on the setup screen (changeable later from
+**Account → Server**). You'll need to allow "install from unknown sources" for your browser/file
+manager, since this isn't distributed through the Play Store.
 
 ## iOS / Android (Expo Go)
 Fastest way to try the app on a real phone without building anything:

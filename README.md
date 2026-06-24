@@ -31,10 +31,10 @@ This section is for whoever hosts Memberr (a VM, home server, etc.). If you just
 someone else's Memberr server from the mobile app, skip to [Part 2](#part-2-using-the-app).
 
 ## Prerequisites
-- Node.js 20+
-- pnpm 9+
 - Docker + Docker Compose
 - A domain name pointed at your server (for production HTTPS — not needed for local dev)
+- Node.js 20+ and pnpm 9+ — **only** needed for local development or if you're building the API
+  from source (Option B below). Just self-hosting the prebuilt image (Option A)? Skip these.
 
 ## Local development
 
@@ -116,13 +116,8 @@ pnpm deploy:all    # both, in the right order
 If you're on Option A, `docker compose pull api && docker compose -f docker-compose.yml -f
 docker-compose.prod.yml up -d --force-recreate api` is the equivalent for picking up a new image.
 
-### Database migrations in production
-```bash
-pnpm db:migrate
-```
-Run this after pulling changes that include new files under `apps/api/src/db/migrations/`. If
-you're running the prebuilt image without a local Node/pnpm toolchain (Option A), run migrations
-inside the container instead: `docker compose exec api node dist/db/migrate.js`.
+Re-run the migration command from above (whichever matches your option) any time you pull/deploy
+changes that add new files under `apps/api/src/db/migrations/`.
 
 ## Server-side troubleshooting
 
@@ -150,6 +145,11 @@ These are real issues hit while setting this project up — saving you the troub
 No setup needed — open your Memberr server's URL in a browser (e.g. `https://memberr.yourdomain.com`).
 The web app talks to the API on the same domain automatically.
 
+## Android: which option do I want?
+Most people want the **prebuilt APK** below. Use **Expo Go** instead if you just want to try the
+app for a minute without installing anything permanent. Only go through a **native build**
+(further down) if you're developing/debugging the app itself.
+
 ## Android (prebuilt APK)
 Don't want to build anything? Grab the latest signed release APK from
 [GitHub Releases](https://github.com/juslembu/memberr/releases/latest) and sideload it. On first
@@ -167,8 +167,10 @@ Fastest way to try the app on a real phone without building anything:
 
 ## Building a real native app (not Expo Go)
 
-Needed if you want an installable app icon (rather than running inside Expo Go), or are testing
-native-only behavior (camera permissions, secure storage, push notifications).
+For Android, the prebuilt APK above already gives you an installable app icon without building
+anything — this section is for developing/debugging the app itself (or for iOS, which has no
+prebuilt download), where you need to test native-only behavior (camera permissions, secure
+storage, push notifications).
 
 ### Android
 

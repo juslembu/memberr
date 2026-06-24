@@ -1,17 +1,45 @@
-# Memberr
+<p align="center">
+  <img src="apps/mobile/assets/images/icon.png" width="96" alt="Memberr icon" />
+</p>
 
-Share membership cards with friends and family. Self-hostable — runs on web, iOS, and Android,
-all talking to a server you control.
+<h1 align="center">Memberr</h1>
 
-> **Note:** This project is vibe-coded — built largely with AI assistance and light human review.
-> Treat it accordingly before relying on it for anything sensitive.
+<p align="center">
+  Share membership cards with friends and family — self-hostable, runs on web, iOS, and Android,
+  all talking to a server you control.
+</p>
+
+<p align="center">
+  <a href="https://github.com/juslembu/memberr/actions/workflows/docker-publish.yml"><img src="https://github.com/juslembu/memberr/actions/workflows/docker-publish.yml/badge.svg" alt="Docker image build status"></a>
+  <a href="https://github.com/juslembu/memberr/actions/workflows/android-release.yml"><img src="https://github.com/juslembu/memberr/actions/workflows/android-release.yml/badge.svg" alt="Android release build status"></a>
+  <a href="https://github.com/juslembu/memberr/pkgs/container/memberr-api"><img src="https://img.shields.io/badge/ghcr.io-memberr--api-blue?logo=docker" alt="Docker image on GHCR"></a>
+</p>
+
+> [!NOTE]
+> This project is vibe-coded — built largely with AI assistance and light human review. Treat it
+> accordingly before relying on it for anything sensitive.
+
+Jump to: [Features](#features) · [Self-hosting](#part-1-running-your-own-server) ·
+[Using the app](#part-2-using-the-app) · [Project structure](#project-structure)
+
+## Features
+
+- **Card wallet** — store membership/loyalty cards with barcode or QR code, organize and reorder them
+- **Sharing** — share a card with another user by email, or via a 7-day invite link if they don't
+  have an account yet; revoke access anytime
+- **Self-hostable** — your data lives on a server you run; no third-party account required
+- **Cross-platform** — one codebase for web, iOS, and Android via Expo
+- **Prebuilt distribution** — pull the API as a ready-made Docker image, or sideload a signed
+  Android APK, with no build toolchain needed for either
 
 ## Stack
 
-- **Frontend**: Expo (React Native + Web) — one codebase for all platforms
-- **Backend**: Fastify + TypeScript
-- **Database**: PostgreSQL 16 + Drizzle ORM
-- **Deployment**: Docker Compose + Caddy (auto-HTTPS)
+| Layer        | Technology                              |
+| ------------ | ---------------------------------------- |
+| Frontend     | Expo (React Native + Web)                |
+| Backend      | Fastify + TypeScript                     |
+| Database     | PostgreSQL 16 + Drizzle ORM               |
+| Deployment   | Docker Compose + Caddy (auto-HTTPS)       |
 
 ## How sharing works
 
@@ -31,48 +59,16 @@ This section is for whoever hosts Memberr (a VM, home server, etc.). If you just
 someone else's Memberr server from the mobile app, skip to [Part 2](#part-2-using-the-app).
 
 ## Prerequisites
+
 - Docker + Docker Compose
 - A domain name pointed at your server (for production HTTPS — not needed for local dev)
 - Node.js 20+ and pnpm 9+ — **only** needed for local development or if you're building the API
   from source (Option B below). Just self-hosting the prebuilt image (Option A)? Skip these.
 
-## Local development
-
-### 1. Install dependencies
-```bash
-pnpm install
-```
-This also builds `packages/shared` automatically (via a `postinstall` script) — no separate build
-step needed.
-
-### 2. Configure environment
-```bash
-cp .env.example .env
-```
-Edit `.env` and set strong values for `JWT_SECRET` and `REFRESH_TOKEN_SECRET` (32+ characters each).
-Generate them with:
-```bash
-node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
-```
-
-### 3. Start the database + API
-```bash
-docker compose up postgres -d
-pnpm db:migrate
-pnpm --filter @memberr/api dev
-```
-The API's `dev` script loads the root `.env` itself (`tsx --env-file`) — nothing extra to wire up.
-It listens on `:3000`.
-
-### 4. Start the mobile/web app
-```bash
-pnpm --filter @memberr/mobile dev
-# Press 'w' for web, 'a' for Android emulator, 'i' for iOS simulator (macOS only)
-```
-
-## Production deployment
+## Quick start: production deployment
 
 **First-time setup, on your server (common to both options below):**
+
 ```bash
 git clone <your-fork-or-this-repo-url> memberr
 cd memberr
@@ -80,6 +76,7 @@ cp .env.example .env
 # Edit .env: set POSTGRES_PASSWORD, JWT_SECRET, REFRESH_TOKEN_SECRET, and CORS_ORIGINS
 # (CORS_ORIGINS should include your domain, e.g. https://memberr.yourdomain.com)
 ```
+
 Edit `infra/Caddyfile` and replace the domain at the top (currently `memberr.cowjuice.xyz`,
 this deployment's own domain) with yours.
 
@@ -88,8 +85,10 @@ all live in it — but you have a choice for the API container itself:
 
 ### Option A: pull the prebuilt image (fastest, no Node/build toolchain needed)
 
-Every push to `main` publishes `ghcr.io/juslembu/memberr-api` (linux/amd64). Skip `pnpm install`
-entirely for this path:
+> [!TIP]
+> This is the recommended path for most self-hosters. Every push to `main` publishes
+> `ghcr.io/juslembu/memberr-api` (linux/amd64) automatically.
+
 ```bash
 docker compose pull api
 docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
@@ -97,6 +96,7 @@ docker compose exec api node dist/db/migrate.js
 ```
 
 ### Option B: build from source (if you've modified the code)
+
 ```bash
 pnpm install
 docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
@@ -108,23 +108,71 @@ Caddy will automatically request a Let's Encrypt certificate once it can verify 
 
 **Deploying updates after the initial setup** — always use these, never a plain `docker compose
 restart` (it won't pick up source/build changes):
+
 ```bash
 pnpm deploy:api    # API only: rebuilds the image, recreates the API container
 pnpm deploy:web    # frontend only: Expo web export, recreates Caddy (which serves the export)
 pnpm deploy:all    # both, in the right order
 ```
+
 If you're on Option A, `docker compose pull api && docker compose -f docker-compose.yml -f
 docker-compose.prod.yml up -d --force-recreate api` is the equivalent for picking up a new image.
 
 Re-run the migration command from above (whichever matches your option) any time you pull/deploy
 changes that add new files under `apps/api/src/db/migrations/`.
 
-## Server-side troubleshooting
+<details>
+<summary>Local development setup</summary>
+
+### 1. Install dependencies
+
+```bash
+pnpm install
+```
+
+This also builds `packages/shared` automatically (via a `postinstall` script) — no separate build
+step needed.
+
+### 2. Configure environment
+
+```bash
+cp .env.example .env
+```
+
+Edit `.env` and set strong values for `JWT_SECRET` and `REFRESH_TOKEN_SECRET` (32+ characters each).
+Generate them with:
+
+```bash
+node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
+```
+
+### 3. Start the database + API
+
+```bash
+docker compose up postgres -d
+pnpm db:migrate
+pnpm --filter @memberr/api dev
+```
+
+The API's `dev` script loads the root `.env` itself (`tsx --env-file`) — nothing extra to wire up.
+It listens on `:3000`.
+
+### 4. Start the mobile/web app
+
+```bash
+pnpm --filter @memberr/mobile dev
+# Press 'w' for web, 'a' for Android emulator, 'i' for iOS simulator (macOS only)
+```
+
+</details>
+
+<details>
+<summary>Server-side troubleshooting</summary>
 
 These are real issues hit while setting this project up — saving you the trouble:
 
 - **`Invalid environment variables` on `pnpm --filter @memberr/api dev`** — you're missing `.env`
-  or it's missing required keys. Re-check step 2 above.
+  or it's missing required keys. Re-check the local development steps above.
 - **`Cannot find module '@memberr/shared/dist/index.js'`** — `packages/shared` wasn't built. Run
   `pnpm --filter @memberr/shared build` (this normally happens automatically via `postinstall`;
   only needed manually after editing files in `packages/shared` while a dev server is already running).
@@ -137,35 +185,43 @@ These are real issues hit while setting this project up — saving you the troub
   packages default to private. After the first successful `docker-publish` workflow run, go to the
   repo's Packages tab and set `memberr-api`'s visibility to public.
 
+</details>
+
 ---
 
 # Part 2: Using the app
 
 ## Web
+
 No setup needed — open your Memberr server's URL in a browser (e.g. `https://memberr.yourdomain.com`).
 The web app talks to the API on the same domain automatically.
 
 ## Android: which option do I want?
+
 Most people want the **prebuilt APK** below. Use **Expo Go** instead if you just want to try the
 app for a minute without installing anything permanent. Only go through a **native build**
 (further down) if you're developing/debugging the app itself.
 
-## Android (prebuilt APK)
+### Prebuilt APK
+
 Don't want to build anything? Grab the latest signed release APK from
 [GitHub Releases](https://github.com/juslembu/memberr/releases/latest) and sideload it. On first
 launch, enter your Memberr server's URL on the setup screen (changeable later from
 **Account → Server**). You'll need to allow "install from unknown sources" for your browser/file
 manager, since this isn't distributed through the Play Store.
 
-## iOS / Android (Expo Go)
+### iOS / Android (Expo Go)
+
 Fastest way to try the app on a real phone without building anything:
+
 1. Install **Expo Go** from the App Store / Play Store.
 2. Run `pnpm --filter @memberr/mobile dev` on a machine on the same network as your phone, and scan
    the QR code it prints.
 3. On first launch, enter your Memberr server's URL (e.g. `https://memberr.yourdomain.com`) on the
    setup screen. You can change this later from **Account → Server**.
 
-## Building a real native app (not Expo Go)
+<details>
+<summary>Building a real native app (not Expo Go)</summary>
 
 For Android, the prebuilt APK above already gives you an installable app icon without building
 anything — this section is for developing/debugging the app itself (or for iOS, which has no
@@ -194,7 +250,9 @@ Requires Android Studio and the Android SDK installed locally:
      locally, or your production domain
 
 ### iOS
+
 Requires a Mac with Xcode installed:
+
 ```bash
 pnpm --filter @memberr/mobile ios
 ```
@@ -219,6 +277,8 @@ pnpm --filter @memberr/mobile ios
   Stop-Process -Id <PID> -Force
   ```
 
+</details>
+
 ---
 
 ## Project structure
@@ -232,6 +292,3 @@ packages/
 infra/
   Caddyfile  Reverse proxy config (edit the domain for your own deployment)
 ```
-
-See `CLAUDE.md` for architecture details (auth model, self-hosting URL resolution, web platform
-gotchas, etc.) if you're modifying the code rather than just deploying it.

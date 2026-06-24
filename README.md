@@ -88,8 +88,8 @@ all live in it — but you have a choice for the API container itself:
 
 ### Option A: pull the prebuilt image (fastest, no Node/build toolchain needed)
 
-Every push to `main` publishes `ghcr.io/juslembu/memberr-api` (multi-arch: amd64 + arm64, so this
-works on a Raspberry Pi or an ARM VPS too). Skip `pnpm install` entirely for this path:
+Every push to `main` publishes `ghcr.io/juslembu/memberr-api` (linux/amd64). Skip `pnpm install`
+entirely for this path:
 ```bash
 docker compose pull api
 docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d

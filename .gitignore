@@ -18,3 +18,6 @@ apps/api/uploads/
 
 # Local-only project instructions for Claude Code (not tracked going forward)
 CLAUDE.md
+
+# Downloaded GitHub Actions / Docker build debugging artifacts
+imports/

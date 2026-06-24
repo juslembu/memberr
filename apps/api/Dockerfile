@@ -7,7 +7,10 @@ COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./
 COPY packages/shared/package.json ./packages/shared/
 COPY apps/api/package.json ./apps/api/
 
-RUN pnpm install --frozen-lockfile
+# --ignore-scripts: the root `postinstall` (builds packages/shared) would otherwise run here too,
+# before the COPY below brings in the actual source — it has nothing to compile yet and fails.
+# The real build happens explicitly below once source is present.
+RUN pnpm install --frozen-lockfile --ignore-scripts
 
 COPY packages/shared ./packages/shared
 COPY apps/api ./apps/api
@@ -24,7 +27,10 @@ COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./
 COPY packages/shared/package.json ./packages/shared/
 COPY apps/api/package.json ./apps/api/
 
-RUN pnpm install --frozen-lockfile --prod
+# --ignore-scripts: same reason as above, plus `typescript` (needed by the postinstall build) is a
+# devDependency stripped by --prod. The already-built dist is copied in below instead. We still
+# need argon2's own native binding for production, so rebuild just that package explicitly.
+RUN pnpm install --frozen-lockfile --prod --ignore-scripts && pnpm rebuild argon2
 
 COPY --from=builder /app/packages/shared/dist ./packages/shared/dist
 COPY --from=builder /app/apps/api/dist ./apps/api/dist

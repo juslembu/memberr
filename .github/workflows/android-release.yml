@@ -73,7 +73,14 @@ jobs:
           cp apps/mobile/android/app/build/outputs/apk/release/app-release.apk \
             "release-out/memberr-${GITHUB_REF_NAME}.apk"
 
+      - name: Upload APK as workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: memberr-${{ github.ref_name }}.apk
+          path: release-out/memberr-*.apk
+
       - name: Create/update GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
           files: release-out/memberr-*.apk

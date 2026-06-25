@@ -46,10 +46,21 @@ export default async function authRoutes(app: FastifyInstance) {
       if (existingUsername) return reply.code(409).send({ error: 'Username already taken' })
 
       const passwordHash = await argon2.hash(password)
-      const [user] = await db
-        .insert(users)
-        .values({ email, username, passwordHash, displayName: displayName ?? null })
-        .returning(USER_FIELDS)
+      let inserted
+      try {
+        inserted = await db
+          .insert(users)
+          .values({ email, username, passwordHash, displayName: displayName ?? null })
+          .returning(USER_FIELDS)
+      } catch (err) {
+        // Pre-checks above aren't atomic with this insert, so a concurrent registration with the
+        // same email/username can still slip through and hit the DB's unique constraint here.
+        const constraint = (err as { constraint?: string }).constraint
+        if (constraint === 'users_email_unique') return reply.code(409).send({ error: 'Email already registered' })
+        if (constraint === 'users_username_unique') return reply.code(409).send({ error: 'Username already taken' })
+        throw err
+      }
+      const [user] = inserted
 
       const { accessToken, refreshToken } = await authRouteHelpers.issueTokens(
         user.id,

@@ -85,3 +85,6 @@ jobs:
         with:
           files: release-out/memberr-*.apk
           fail_on_unmatched_files: true
+          # Tags with a hyphen (e.g. v1.0.0-rc.1) are pre-releases — keeps them visibly
+          # separate from "Latest release" on the Releases page.
+          prerelease: ${{ contains(github.ref_name, '-') }}

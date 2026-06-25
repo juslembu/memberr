@@ -21,3 +21,6 @@ CLAUDE.md
 
 # Downloaded GitHub Actions / Docker build debugging artifacts
 imports/
+
+# Locally-installed skill, not part of the tracked project skill set
+.agents/skills/create-readme/

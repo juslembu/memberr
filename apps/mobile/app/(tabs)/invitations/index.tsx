@@ -144,7 +144,7 @@ const styles = StyleSheet.create({
   cardBody: { flex: 1, padding: 16 },
   storeName: { fontSize: 16, fontWeight: '700', color: t.text, letterSpacing: -0.2 },
   from: { fontSize: 13, color: t.textMuted, marginTop: 2 },
-  actions: { flexDirection: 'column', gap: 6, paddingRight: 12 },
+  actions: { flexDirection: 'column', gap: 6, paddingVertical: 14, paddingRight: 16 },
   acceptBtn: {
     backgroundColor: t.accent, borderRadius: 8,
     paddingVertical: 7, paddingHorizontal: 14,

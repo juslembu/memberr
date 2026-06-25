@@ -54,7 +54,7 @@
       ]
     ],
     "extra": {
-      "apiUrl": "https://memberr.cowjuice.xyz"
+      "apiUrl": ""
     },
     "experiments": {
       "typedRoutes": true

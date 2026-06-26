@@ -35,42 +35,44 @@ export function CardThumbnail({ card, onPress, sharedBy, shareExpiresAt }: Props
       <View style={styles.circle1} />
       <View style={styles.circle2} />
 
-      {/* Top row: store name + logo */}
-      <View style={styles.top}>
-        <Text style={styles.store} numberOfLines={2}>{card.storeName}</Text>
-        <View style={styles.topRight}>
-          {card.isPinned ? (
-            <View style={styles.pinBadge}>
-              <Ionicons name="bookmark" size={11} color="#fff" />
-            </View>
-          ) : null}
-          {card.logoUrl ? (
-            <Image source={{ uri: card.logoUrl }} style={styles.logo} resizeMode="contain" />
-          ) : null}
+      {/* Top content — flex:1 absorbs any height variation so barcode stays pinned */}
+      <View style={styles.topContent}>
+        <View style={styles.top}>
+          <Text style={styles.store} numberOfLines={2}>{card.storeName}</Text>
+          <View style={styles.topRight}>
+            {card.isPinned ? (
+              <View style={styles.pinBadge}>
+                <Ionicons name="bookmark" size={11} color="#fff" />
+              </View>
+            ) : null}
+            {card.logoUrl ? (
+              <Image source={{ uri: card.logoUrl }} style={styles.logo} resizeMode="contain" />
+            ) : null}
+          </View>
         </View>
+
+        {sharedBy ? (
+          <Text style={styles.sharedBy} numberOfLines={1}>via {sharedBy}</Text>
+        ) : null}
+
+        {isExpired ? (
+          <View style={styles.expiryBadge}>
+            <Ionicons name="alert-circle" size={10} color="#fff" />
+            <Text style={styles.expiryText}>{isShareExpiry ? 'Access expired' : 'Expired'}</Text>
+          </View>
+        ) : isExpiring ? (
+          <View style={[styles.expiryBadge, styles.expiryWarn]}>
+            <Ionicons name="time-outline" size={10} color="#fff" />
+            <Text style={styles.expiryText}>
+              {expDays === 0
+                ? (isShareExpiry ? 'Access ends today' : 'Expires today')
+                : `${isShareExpiry ? 'Access: ' : ''}${expDays}d left`}
+            </Text>
+          </View>
+        ) : null}
       </View>
 
-      {sharedBy ? (
-        <Text style={styles.sharedBy} numberOfLines={1}>via {sharedBy}</Text>
-      ) : null}
-
-      {isExpired ? (
-        <View style={styles.expiryBadge}>
-          <Ionicons name="alert-circle" size={10} color="#fff" />
-          <Text style={styles.expiryText}>{isShareExpiry ? 'Access expired' : 'Expired'}</Text>
-        </View>
-      ) : isExpiring ? (
-        <View style={[styles.expiryBadge, styles.expiryWarn]}>
-          <Ionicons name="time-outline" size={10} color="#fff" />
-          <Text style={styles.expiryText}>
-            {expDays === 0
-              ? (isShareExpiry ? 'Access ends today' : 'Expires today')
-              : `${isShareExpiry ? 'Access: ' : ''}${expDays}d left`}
-          </Text>
-        </View>
-      ) : null}
-
-      {/* Barcode */}
+      {/* Barcode — always at the same vertical position */}
       <View style={styles.barcodeWrap}>
         <BarcodeDisplay
           value={card.cardNumber}
@@ -98,9 +100,10 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 3 },
     elevation: 4,
-    minHeight: 160,
+    height: 175,
     ...(Platform.OS === 'web' ? { cursor: 'pointer' } as any : {}),
   },
+  topContent: { flex: 1, overflow: 'hidden' },
   pressed: {
     transform: [{ scale: 0.97 }],
     opacity: 0.92,

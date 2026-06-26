@@ -54,7 +54,10 @@
       ]
     ],
     "extra": {
-      "apiUrl": ""
+      "apiUrl": "",
+      "eas": {
+        "projectId": ""
+      }
     },
     "experiments": {
       "typedRoutes": true

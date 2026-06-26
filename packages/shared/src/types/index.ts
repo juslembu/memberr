@@ -125,6 +125,7 @@ export interface PublicCardView {
 
 export interface SharedCard {
   shareId: string
+  isPinned: boolean
   card: Card
   grantedBy: Pick<User, 'id' | 'username' | 'displayName' | 'avatarUrl'>
   expiresAt: string | null

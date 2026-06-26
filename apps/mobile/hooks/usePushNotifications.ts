@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { Platform } from 'react-native'
 import * as Notifications from 'expo-notifications'
+import Constants from 'expo-constants'
 import { api } from '../lib/api'
 
 export function usePushNotifications() {
@@ -12,14 +13,27 @@ export function usePushNotifications() {
 
 async function registerPushToken() {
   try {
+    if (Platform.OS === 'android') {
+      await Notifications.setNotificationChannelAsync('default', {
+        name: 'Notifications',
+        importance: Notifications.AndroidImportance.MAX,
+        vibrationPattern: [0, 250, 250, 250],
+        lightColor: '#0EA5E9',
+      })
+    }
+
     const perms = await Notifications.requestPermissionsAsync() as { status: string }
     if (perms.status !== 'granted') return
-    // Requires EAS projectId for production push tokens — gracefully skips without it
-    const tokenData = await Notifications.getExpoPushTokenAsync().catch(() => null)
+
+    const extra = Constants.expoConfig?.extra as { eas?: { projectId?: string } } | undefined
+    const projectId = extra?.eas?.projectId
+    if (!projectId) return
+
+    const tokenData = await Notifications.getExpoPushTokenAsync({ projectId }).catch(() => null)
     if (!tokenData) return
     await api.auth.savePushToken(tokenData.data)
   } catch {
-    // Not available in this environment (web, simulator without push support, etc.)
+    // Not available in this environment (simulator without push support, etc.)
   }
 }
 

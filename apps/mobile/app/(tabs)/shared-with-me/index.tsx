@@ -69,12 +69,15 @@ export default function SharedWithMeScreen() {
             onPress={() => router.push(`/(tabs)/shared-with-me/${item.shareId}`)}
             activeOpacity={0.8}
           >
-            <View>
+            <View style={{ flex: 1 }}>
               <Text style={styles.storeName}>{item.card.storeName}</Text>
               <Text style={styles.sharedBy}>
                 from {item.grantedBy.displayName ?? item.grantedBy.username}
               </Text>
             </View>
+            {item.isPinned && (
+              <Ionicons name="bookmark" size={14} color={item.card.color ?? '#0EA5E9'} style={{ marginRight: 8 }} />
+            )}
             <Ionicons name="chevron-forward" size={18} color="#9ca3af" />
           </TouchableOpacity>
         )}

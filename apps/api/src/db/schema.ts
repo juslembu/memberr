@@ -7,6 +7,7 @@ import {
   timestamp,
   uniqueIndex,
   index,
+  primaryKey,
 } from 'drizzle-orm/pg-core'
 import { relations } from 'drizzle-orm'
 
@@ -117,6 +118,17 @@ export const publicShares = pgTable('public_shares', {
   revokedAt: timestamp('revoked_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 })
+
+// Per-recipient pin state for shared cards. Separate from cards.isPinned
+// (the owner's pin) so each recipient can organise their own shared-with-me list.
+export const cardSharePins = pgTable(
+  'card_share_pins',
+  {
+    userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    shareId: uuid('share_id').notNull().references(() => cardShares.id, { onDelete: 'cascade' }),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.shareId] })],
+)
 
 // Per-viewer card ordering, since the same card can show up in many users'
 // lists (the owner, plus everyone it's shared with) and each person should

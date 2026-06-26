@@ -293,6 +293,10 @@ export const api = {
     async get(shareId: string): Promise<SharedCard> {
       return json<SharedCard>(await fetchWithAuth(`/api/v1/shared-with-me/${shareId}`))
     },
+
+    async togglePin(shareId: string): Promise<{ isPinned: boolean }> {
+      return json(await fetchWithAuth(`/api/v1/shared-with-me/${shareId}/pin`, { method: 'POST' }))
+    },
   },
 
   cardOrder: {

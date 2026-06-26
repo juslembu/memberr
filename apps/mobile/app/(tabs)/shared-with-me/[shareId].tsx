@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback } from 'react'
 import {
   View,
   Text,
@@ -20,6 +20,7 @@ import type { SharedCard, BarcodeType } from '@memberr/shared'
 export default function SharedCardDetailScreen() {
   const { shareId } = useLocalSearchParams<{ shareId: string }>()
   const [data, setData] = useState<SharedCard | null>(null)
+  const [isPinned, setIsPinned] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [fullImageVisible, setFullImageVisible] = useState(false)
@@ -29,12 +30,19 @@ export default function SharedCardDetailScreen() {
       activateKeepAwakeAsync()
       api.sharedWithMe
         .get(shareId)
-        .then(setData)
+        .then((d) => { setData(d); setIsPinned(d.isPinned) })
         .catch(() => setError('Failed to load card'))
         .finally(() => setLoading(false))
       return () => { void deactivateKeepAwake() }
     }, [shareId]),
   )
+
+  async function handlePin() {
+    try {
+      const result = await api.sharedWithMe.togglePin(shareId)
+      setIsPinned(result.isPinned)
+    } catch {}
+  }
 
   if (loading) {
     return (
@@ -69,6 +77,9 @@ export default function SharedCardDetailScreen() {
               Shared by {grantedBy.displayName ?? grantedBy.username}
             </Text>
           </View>
+          <TouchableOpacity style={styles.pinBtn} onPress={handlePin}>
+            <Ionicons name={isPinned ? 'bookmark' : 'bookmark-outline'} size={20} color="#fff" />
+          </TouchableOpacity>
           {card.logoUrl ? (
             <View style={styles.heroLogoWrap}>
               <Image source={{ uri: card.logoUrl }} style={styles.heroLogo} resizeMode="contain" />
@@ -137,6 +148,7 @@ const styles = StyleSheet.create({
   errorText: { color: t.errorText, fontSize: 15, textAlign: 'center' },
   cardHero: { padding: 24, paddingTop: 32, paddingBottom: 16 },
   heroTop: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
+  pinBtn: { padding: 6, marginRight: 4 },
   heroLogoWrap: { flexShrink: 0 },
   heroLogo: { width: 52, height: 52, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.15)' },
   heroStore: { fontSize: 26, fontWeight: '800', color: '#fff', letterSpacing: -0.5 },

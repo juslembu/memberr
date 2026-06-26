@@ -39,6 +39,15 @@ jobs:
       - name: Install Android SDK packages
         run: sdkmanager --install "platforms;android-35" "build-tools;35.0.0" "ndk;26.1.10909125"
 
+      - name: Write google-services.json (FCM push notifications)
+        working-directory: apps/mobile
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: |
+          if [ -n "$GOOGLE_SERVICES_JSON" ]; then
+            echo "$GOOGLE_SERVICES_JSON" > google-services.json
+          fi
+
       - name: Prebuild native Android project
         working-directory: apps/mobile
         run: CI=1 pnpm exec expo prebuild --platform android --no-install

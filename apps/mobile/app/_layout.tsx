@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Stack } from 'expo-router'
 import { StatusBar } from 'expo-status-bar'
 import * as SplashScreen from 'expo-splash-screen'
+import * as Notifications from 'expo-notifications'
 import { Platform, StyleSheet } from 'react-native'
 import { ThemeProvider, DefaultTheme } from '@react-navigation/native'
 import { AuthContext, useAuthState } from '../hooks/useAuth'
@@ -11,6 +12,17 @@ import { hasServerUrl } from '../lib/serverUrl'
 import { t } from '../lib/theme'
 
 SplashScreen.preventAutoHideAsync()
+
+// Show notifications when app is in foreground
+if (Platform.OS !== 'web') {
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowAlert: true,
+      shouldPlaySound: true,
+      shouldSetBadge: false,
+    }),
+  })
+}
 
 function PushNotificationSetup() {
   usePushNotifications()

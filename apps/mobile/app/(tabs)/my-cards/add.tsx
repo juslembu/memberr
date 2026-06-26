@@ -89,6 +89,7 @@ export default function AddCardScreen() {
   const [cardDataUrl, setCardDataUrl] = useState<string | null>(null)
   const [predefinedShops, setPredefinedShops] = useState<PredefinedShop[]>([])
   const [selectedShopId, setSelectedShopId] = useState<string | null>(null)
+  const [shopInputFocused, setShopInputFocused] = useState(false)
   const scannedOnce = useRef(false)
 
   useFocusEffect(useCallback(() => {
@@ -107,6 +108,7 @@ export default function AddCardScreen() {
     setUploadedImageUri(null)
     setCardDataUrl(null)
     setSelectedShopId(null)
+    setShopInputFocused(false)
     scannedOnce.current = false
     api.shops.list().then(setPredefinedShops).catch(() => {})
   }, []))
@@ -258,49 +260,67 @@ export default function AddCardScreen() {
           <View style={styles.errorBox}><Text style={styles.errorText}>{detectError}</Text></View>
         ) : null}
 
-        {predefinedShops.length > 0 && (
-          <View style={styles.chipsSection}>
-            <Text style={styles.chipsLabel}>Quick select</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsRow}>
-              {predefinedShops.map((shop) => {
-                const active = selectedShopId === shop.id
-                return (
-                  <Pressable
+        <Text style={styles.label}>Shop name *</Text>
+        <View style={styles.shopInputWrap}>
+          <TextInput
+            style={[styles.input, selectedShopId ? styles.shopInputSelected : null]}
+            value={storeName}
+            onChangeText={(v) => { setStoreName(v); setSelectedShopId(null) }}
+            onFocus={() => setShopInputFocused(true)}
+            onBlur={() => setTimeout(() => setShopInputFocused(false), 100)}
+            placeholder="Search or type shop name…"
+            placeholderTextColor="#9ca3af"
+          />
+          {selectedShopId ? (
+            <TouchableOpacity
+              style={styles.shopClearBtn}
+              onPress={() => setSelectedShopId(null)}
+            >
+              <Ionicons name="close-circle" size={20} color="#9ca3af" />
+            </TouchableOpacity>
+          ) : null}
+        </View>
+
+        {selectedShopId ? (
+          <View style={styles.shopSelectedBadge}>
+            {logoUrl ? (
+              <Image source={{ uri: logoUrl }} style={styles.selectedLogo} resizeMode="contain" />
+            ) : null}
+            <Text style={styles.shopSelectedText}>Predefined shop · color & logo applied</Text>
+          </View>
+        ) : shopInputFocused && predefinedShops.length > 0 ? (() => {
+          const suggestions = predefinedShops.filter(s =>
+            storeName.length === 0 || s.name.toLowerCase().includes(storeName.toLowerCase())
+          )
+          if (suggestions.length === 0) return null
+          return (
+            <View style={styles.suggestions}>
+              <ScrollView keyboardShouldPersistTaps="always" nestedScrollEnabled style={{ maxHeight: 220 }}>
+                {suggestions.map((shop, index) => (
+                  <TouchableOpacity
                     key={shop.id}
-                    style={[styles.chip, active && styles.chipActive]}
+                    style={[styles.suggestionItem, index < suggestions.length - 1 && styles.suggestionItemBorder]}
                     onPress={() => {
-                      if (active) {
-                        setSelectedShopId(null)
-                      } else {
-                        setSelectedShopId(shop.id)
-                        setStoreName(shop.name)
-                        setColor(shop.color)
-                        setLogoUrl(shop.logoUrl ?? null)
-                      }
+                      setSelectedShopId(shop.id)
+                      setStoreName(shop.name)
+                      setColor(shop.color)
+                      setLogoUrl(shop.logoUrl ?? null)
+                      setShopInputFocused(false)
                     }}
                   >
                     {shop.logoUrl ? (
-                      <Image source={{ uri: shop.logoUrl }} style={styles.chipLogo} resizeMode="contain" />
+                      <Image source={{ uri: shop.logoUrl }} style={styles.suggestionLogo} resizeMode="contain" />
                     ) : (
-                      <View style={[styles.chipDot, { backgroundColor: shop.color }]} />
+                      <View style={[styles.suggestionDot, { backgroundColor: shop.color }]} />
                     )}
-                    <Text style={[styles.chipText, active && styles.chipTextActive]}>{shop.name}</Text>
-                  </Pressable>
-                )
-              })}
-            </ScrollView>
-          </View>
-        )}
-
-        <Text style={styles.label}>Shop name *</Text>
-        <TextInput
-          style={[styles.input, selectedShopId && styles.inputLocked]}
-          value={storeName}
-          onChangeText={(v) => { setStoreName(v); setSelectedShopId(null) }}
-          placeholder="e.g. Emart, Doremart, Everise"
-          placeholderTextColor="#9ca3af"
-          editable={!selectedShopId}
-        />
+                    <Text style={styles.suggestionText} numberOfLines={1}>{shop.name}</Text>
+                    <Ionicons name="chevron-forward" size={14} color="#d1d5db" />
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          )
+        })() : null}
 
         <Text style={styles.label}>Card / membership number *</Text>
         <TextInput
@@ -420,29 +440,6 @@ const styles = StyleSheet.create({
   },
   previewStore: { fontSize: 22, fontWeight: '700', color: '#fff' },
   previewNumber: { fontSize: 15, color: 'rgba(255,255,255,0.85)', letterSpacing: 2, marginTop: 12 },
-  chipsSection: { marginBottom: 4 },
-  chipsLabel: { fontSize: 11, fontWeight: '600', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 8, marginTop: 16 },
-  chipsRow: { gap: 8, paddingRight: 4 },
-  chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    borderRadius: 20,
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    ...(Platform.OS === 'web' ? { cursor: 'pointer' } as any : {}),
-  },
-  chipActive: {
-    backgroundColor: '#E0F2FE',
-    borderColor: '#0EA5E9',
-  },
-  chipDot: { width: 14, height: 14, borderRadius: 7 },
-  chipLogo: { width: 20, height: 20, borderRadius: 4 },
-  chipText: { fontSize: 14, fontWeight: '600', color: '#374151' },
-  chipTextActive: { color: '#0EA5E9' },
   form: { padding: 24 },
   errorBox: { backgroundColor: '#fef2f2', borderRadius: 10, padding: 12, marginBottom: 12 },
   errorText: { color: '#dc2626', fontSize: 14 },
@@ -451,10 +448,30 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 10,
     paddingHorizontal: 14, paddingVertical: 12, fontSize: 16, color: '#111827', backgroundColor: '#fff',
   },
-  inputLocked: {
-    backgroundColor: '#f3f4f6',
-    color: '#6b7280',
+  shopInputWrap: { position: 'relative' },
+  shopInputSelected: { paddingRight: 40 },
+  shopClearBtn: { position: 'absolute', right: 12, top: 0, bottom: 0, justifyContent: 'center' },
+  shopSelectedBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6, paddingHorizontal: 2 },
+  selectedLogo: { width: 16, height: 16, borderRadius: 3 },
+  shopSelectedText: { fontSize: 12, color: '#0EA5E9', fontWeight: '600' },
+  suggestions: {
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    borderRadius: 10,
+    marginTop: 4,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 4,
   },
+  suggestionItem: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 14, paddingVertical: 12 },
+  suggestionItemBorder: { borderBottomWidth: 1, borderBottomColor: '#f3f4f6' },
+  suggestionLogo: { width: 28, height: 28, borderRadius: 6, backgroundColor: '#f3f4f6' },
+  suggestionDot: { width: 28, height: 28, borderRadius: 14 },
+  suggestionText: { flex: 1, fontSize: 15, fontWeight: '600', color: '#111827' },
   textarea: { minHeight: 80, textAlignVertical: 'top' },
   picker: {
     borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 10,

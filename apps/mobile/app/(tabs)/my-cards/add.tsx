@@ -21,10 +21,19 @@ import { BarcodeDisplay } from '../../../components/BarcodeDisplay'
 import { BarcodeScanner } from '../../../components/BarcodeScanner'
 
 const CARD_COLORS = [
-  '#0EA5E9', '#8b5cf6', '#ec4899', '#f43f5e',
-  '#f97316', '#eab308', '#22c55e', '#14b8a6',
-  '#3b82f6', '#64748b',
+  // Blues & purples
+  '#0EA5E9', '#2563EB', '#4F46E5', '#7C3AED', '#9333EA', '#C026D3',
+  // Pinks & reds
+  '#DB2777', '#E11D48', '#DC2626', '#EA580C', '#F97316', '#D97706',
+  // Yellows & greens
+  '#EAB308', '#84CC16', '#22C55E', '#16A34A', '#14B8A6', '#0891B2',
+  // Darks & neutrals
+  '#1E293B', '#374151', '#78350F', '#064E3B', '#4338CA', '#6B21A8',
 ]
+
+function isValidHex(hex: string): boolean {
+  return /^#[0-9A-Fa-f]{6}$/.test(hex)
+}
 
 type Step = 'method' | 'scanning' | 'form'
 
@@ -90,6 +99,8 @@ export default function AddCardScreen() {
   const [predefinedShops, setPredefinedShops] = useState<PredefinedShop[]>([])
   const [selectedShopId, setSelectedShopId] = useState<string | null>(null)
   const [shopInputFocused, setShopInputFocused] = useState(false)
+  const [customHex, setCustomHex] = useState('')
+  const [showCustomInput, setShowCustomInput] = useState(false)
   const scannedOnce = useRef(false)
 
   useFocusEffect(useCallback(() => {
@@ -109,6 +120,8 @@ export default function AddCardScreen() {
     setCardDataUrl(null)
     setSelectedShopId(null)
     setShopInputFocused(false)
+    setCustomHex('')
+    setShowCustomInput(false)
     scannedOnce.current = false
     api.shops.list().then(setPredefinedShops).catch(() => {})
   }, []))
@@ -344,10 +357,52 @@ export default function AddCardScreen() {
             <Pressable
               key={c}
               style={[styles.colorSwatch, { backgroundColor: c }, color === c && styles.colorSelected]}
-              onPress={() => setColor(c)}
+              onPress={() => { setColor(c); setShowCustomInput(false) }}
             />
           ))}
+          {/* Custom colour swatch */}
+          <Pressable
+            style={[
+              styles.colorSwatch,
+              styles.colorSwatchCustom,
+              !CARD_COLORS.includes(color) && { backgroundColor: color },
+              !CARD_COLORS.includes(color) && styles.colorSelected,
+            ]}
+            onPress={() => {
+              const next = !showCustomInput
+              setShowCustomInput(next)
+              if (next) setCustomHex(CARD_COLORS.includes(color) ? '' : color)
+            }}
+          >
+            {CARD_COLORS.includes(color)
+              ? <Ionicons name="color-palette-outline" size={16} color="#94a3b8" />
+              : null}
+          </Pressable>
         </View>
+
+        {showCustomInput && (
+          <View style={styles.customColorRow}>
+            <View style={[styles.customColorPreview, { backgroundColor: isValidHex(customHex) ? customHex : '#e5e7eb' }]} />
+            <Text style={styles.customColorHash}>#</Text>
+            <TextInput
+              style={styles.customColorInput}
+              value={customHex.replace(/^#/, '')}
+              onChangeText={(v) => {
+                const hex = '#' + v.toUpperCase().replace(/[^0-9A-F]/g, '').slice(0, 6)
+                setCustomHex(hex)
+                if (isValidHex(hex)) setColor(hex)
+              }}
+              placeholder="e.g. FF5733"
+              placeholderTextColor="#9ca3af"
+              maxLength={6}
+              autoCapitalize="characters"
+              autoCorrect={false}
+            />
+            {isValidHex(customHex) && (
+              <Ionicons name="checkmark-circle" size={20} color="#22c55e" />
+            )}
+          </View>
+        )}
 
         <Text style={styles.label}>Notes (optional)</Text>
         <TextInput
@@ -480,9 +535,43 @@ const styles = StyleSheet.create({
   },
   pickerText: { fontSize: 16, color: '#111827' },
   pickerChevron: { fontSize: 16, color: '#6b7280' },
-  colorRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 4 },
-  colorSwatch: { width: 36, height: 36, borderRadius: 18 },
+  colorRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4 },
+  colorSwatch: { width: 34, height: 34, borderRadius: 17 },
   colorSelected: { borderWidth: 3, borderColor: '#111827' },
+  colorSwatchCustom: {
+    backgroundColor: '#f1f5f9',
+    borderWidth: 1.5,
+    borderColor: '#e2e8f0',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  customColorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 10,
+    backgroundColor: '#f8fafc',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  customColorPreview: {
+    width: 28,
+    height: 28,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.08)',
+  },
+  customColorHash: { fontSize: 16, fontWeight: '700', color: '#374151' },
+  customColorInput: {
+    flex: 1,
+    fontSize: 16,
+    color: '#111827',
+    letterSpacing: 1,
+    ...(Platform.OS === 'web' ? { outlineStyle: 'none' } as any : {}),
+  },
   actions: { flexDirection: 'row', gap: 12, marginTop: 32, marginBottom: 40 },
   backBtn: {
     flex: 1, borderWidth: 1.5, borderColor: '#e5e7eb', borderRadius: 12,

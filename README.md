@@ -25,7 +25,7 @@ Jump to: [Features](#features) · [Self-hosting](#part-1-running-your-own-server
 ## Features
 
 - **Card wallet**: store membership and loyalty cards with barcode or QR code, organize and reorder them freely
-- **Sharing**: share a card with another user by email or via a time-limited invite link; revoke access at any time
+- **Sharing**: share a card with another registered user by username, or send a time-limited invite link to someone without an account; revoke access at any time
 - **Self-hostable**: your data lives on a server you control with no third-party account required
 - **Cross-platform**: one codebase for web, iOS, and Android via Expo
 - **Prebuilt distribution**: pull the API as a ready-made Docker image or sideload a signed Android APK without needing a build toolchain
@@ -42,9 +42,9 @@ Jump to: [Features](#features) · [Self-hosting](#part-1-running-your-own-server
 ## How sharing works
 
 1. User A adds a membership card (store name, card number, barcode type)
-2. User A opens the card and taps Share, then enters User B's email or username
+2. User A opens the card and taps Share, then enters User B's username
 3. If User B has an account, access is granted immediately
-4. If User B has no account, a shareable invite link is created (7-day expiry); User A sends it however they like (text, chat, etc.) since Memberr does not send emails itself
+4. If User B has no account yet, a shareable invite link is created (7-day expiry); User A sends it however they like (text, chat, etc.) since Memberr does not send emails
 5. User B opens the link, creates an account or signs in, and can now view and scan the card's barcode
 6. User A can revoke access at any time from the card detail screen
 

@@ -13,6 +13,7 @@ import {
   Share,
   Platform,
   KeyboardAvoidingView,
+  Animated,
 } from 'react-native'
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
@@ -67,6 +68,14 @@ export default function CardDetailScreen() {
   const [serverUrl, setServerUrl] = useState('')
 
   useEffect(() => { getServerUrl().then(setServerUrl) }, [])
+
+  const sheetAnim = useRef(new Animated.Value(400)).current
+  useEffect(() => {
+    if (showShareModal || showPublicModal) {
+      sheetAnim.setValue(400)
+      Animated.spring(sheetAnim, { toValue: 0, useNativeDriver: true, bounciness: 0, speed: 20 }).start()
+    }
+  }, [showShareModal, showPublicModal])
 
   useFocusEffect(useCallback(() => {
     activateKeepAwakeAsync()
@@ -463,13 +472,13 @@ export default function CardDetailScreen() {
       {/* Public link creation modal */}
       <Modal
         visible={showPublicModal}
-        animationType="slide"
+        animationType="none"
         transparent
         onRequestClose={() => { setShowPublicModal(false); setNewPublicLink(null); setPublicLabel('') }}
       >
         <KeyboardAvoidingView style={styles.shareModalOuter} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <TouchableOpacity style={styles.shareModalScrim} activeOpacity={1} onPress={() => { setShowPublicModal(false); setNewPublicLink(null); setPublicLabel('') }} />
-          <View style={styles.shareModalSheet}>
+          <Animated.View style={[styles.shareModalSheet, { transform: [{ translateY: sheetAnim }] }]}>
             <View style={styles.shareHandle} />
             <View style={styles.shareHeader}>
               <View style={[styles.shareIconWrap, { backgroundColor: '#F0FFF4' }]}>
@@ -591,20 +600,20 @@ export default function CardDetailScreen() {
                 <Text style={styles.shareSendBtnText}>Create another</Text>
               </TouchableOpacity>
             )}
-          </View>
+          </Animated.View>
         </KeyboardAvoidingView>
       </Modal>
 
       {/* Share modal */}
       <Modal
         visible={showShareModal}
-        animationType="slide"
+        animationType="none"
         transparent
         onRequestClose={() => { setShowShareModal(false); setShareSuccess(''); setShareError(''); setCanReshare(false); setShareDuration(null) }}
       >
         <KeyboardAvoidingView style={styles.shareModalOuter} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <TouchableOpacity style={styles.shareModalScrim} activeOpacity={1} onPress={() => { setShowShareModal(false); setShareSuccess(''); setShareError(''); setCanReshare(false) }} />
-          <View style={styles.shareModalSheet}>
+          <Animated.View style={[styles.shareModalSheet, { transform: [{ translateY: sheetAnim }] }]}>
             <View style={styles.shareHandle} />
             <View style={styles.shareHeader}>
               <View style={styles.shareIconWrap}>
@@ -714,7 +723,7 @@ export default function CardDetailScreen() {
                 </>
               )}
             </TouchableOpacity>
-          </View>
+          </Animated.View>
         </KeyboardAvoidingView>
       </Modal>
     </ScrollView>

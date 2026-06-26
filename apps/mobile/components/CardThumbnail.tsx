@@ -132,8 +132,10 @@ const styles = StyleSheet.create({
   },
   topRight: {
     alignItems: 'flex-end',
+    justifyContent: 'flex-start',
     gap: 4,
     flexShrink: 0,
+    minHeight: 36,
   },
   store: {
     flex: 1,

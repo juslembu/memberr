@@ -23,21 +23,28 @@ type ListItem =
   | { kind: 'own'; card: Card }
   | { kind: 'shared'; data: SharedCard }
 
-type Filter = 'all' | 'mine' | 'shared'
+type Filter = 'all' | 'mine' | 'shared' | 'pinned'
 
 function cardIdOf(item: ListItem): string {
   return item.kind === 'own' ? item.card.id : item.data.card.id
 }
 
+function isPinnedItem(item: ListItem): boolean {
+  return item.kind === 'own' ? item.card.isPinned : item.data.isPinned
+}
+
 function applyOrder(items: ListItem[], orderMap: Record<string, number>): ListItem[] {
-  return [...items].sort((a, b) => {
+  const byOrder = (a: ListItem, b: ListItem) => {
     const ao = orderMap[cardIdOf(a)]
     const bo = orderMap[cardIdOf(b)]
     if (ao != null && bo != null) return ao - bo
     if (ao != null) return -1
     if (bo != null) return 1
     return 0
-  })
+  }
+  const pinned = items.filter(isPinnedItem).sort(byOrder)
+  const unpinned = items.filter((i) => !isPinnedItem(i)).sort(byOrder)
+  return [...pinned, ...unpinned]
 }
 
 function SkeletonRow() {
@@ -106,9 +113,12 @@ export default function MyCardsScreen() {
     } catch {}
   }
 
+  const pinnedCount = items.filter(isPinnedItem).length
+
   const filtered = items.filter((item) => {
     if (filter === 'mine' && item.kind !== 'own') return false
     if (filter === 'shared' && item.kind !== 'shared') return false
+    if (filter === 'pinned' && !isPinnedItem(item)) return false
     const name = item.kind === 'own' ? item.card.storeName : item.data.card.storeName
     return name.toLowerCase().includes(search.toLowerCase())
   })
@@ -139,18 +149,29 @@ export default function MyCardsScreen() {
         </View>
         {/* Filter chips */}
         <View style={styles.filterRow}>
-          {(['all', 'mine', 'shared'] as Filter[]).map((f) => (
-            <TouchableOpacity
-              key={f}
-              style={[styles.filterChip, filter === f && styles.filterChipActive]}
-              onPress={() => setFilter(f)}
-              disabled={reorderMode}
-            >
-              <Text style={[styles.filterChipText, filter === f && styles.filterChipTextActive]}>
-                {f === 'all' ? 'All' : f === 'mine' ? 'Mine' : 'Shared with me'}
-              </Text>
-            </TouchableOpacity>
-          ))}
+          {(['all', 'mine', 'shared', 'pinned'] as Filter[]).map((f) => {
+            if (f === 'pinned' && pinnedCount === 0) return null
+            return (
+              <TouchableOpacity
+                key={f}
+                style={[styles.filterChip, filter === f && styles.filterChipActive]}
+                onPress={() => setFilter(f)}
+                disabled={reorderMode}
+              >
+                {f === 'pinned' && (
+                  <Ionicons
+                    name="bookmark"
+                    size={11}
+                    color={filter === f ? t.accent : t.textMuted}
+                    style={{ marginRight: 3 }}
+                  />
+                )}
+                <Text style={[styles.filterChipText, filter === f && styles.filterChipTextActive]}>
+                  {f === 'all' ? 'All' : f === 'mine' ? 'Mine' : f === 'shared' ? 'Shared' : 'Pinned'}
+                </Text>
+              </TouchableOpacity>
+            )
+          })}
           {filter === 'all' && !search && items.length > 1 && (
             <TouchableOpacity
               style={[styles.reorderChip, reorderMode && styles.reorderChipActive]}
@@ -167,7 +188,7 @@ export default function MyCardsScreen() {
 
       {reorderMode ? (
         <ScrollView contentContainerStyle={styles.list}>
-          <ReorderableCardList items={items} onReorder={handleReorder} />
+          <ReorderableCardList items={items} onReorder={handleReorder} pinnedCount={pinnedCount} />
         </ScrollView>
       ) : (
       <FlatList
@@ -219,7 +240,7 @@ export default function MyCardsScreen() {
           const sharedBy = item.data.grantedBy.displayName ?? item.data.grantedBy.username
           return (
             <CardThumbnail
-              card={item.data.card}
+              card={{ ...item.data.card, isPinned: item.data.isPinned }}
               sharedBy={sharedBy}
               shareExpiresAt={item.data.expiresAt}
               onPress={() => router.push(`/(tabs)/shared-with-me/${item.data.shareId}`)}

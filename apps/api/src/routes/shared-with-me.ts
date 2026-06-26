@@ -1,7 +1,7 @@
 import { FastifyInstance } from 'fastify'
 import { db } from '../db/client.js'
 import { cards, cardShares, users } from '../db/schema.js'
-import { eq, and, isNull, or, gt } from 'drizzle-orm'
+import { eq, and, isNull, or, gt, sql } from 'drizzle-orm'
 
 export default async function sharedWithMeRoutes(app: FastifyInstance) {
   app.get('/', async (request) => {
@@ -21,7 +21,7 @@ export default async function sharedWithMeRoutes(app: FastifyInstance) {
           color: cards.color,
           logoUrl: cards.logoUrl,
           cardImageUrl: cards.cardImageUrl,
-          isPinned: cards.isPinned,
+          isPinned: sql<boolean>`false`,
           expiresAt: cards.expiresAt,
           isActive: cards.isActive,
           createdAt: cards.createdAt,
@@ -65,7 +65,7 @@ export default async function sharedWithMeRoutes(app: FastifyInstance) {
           color: cards.color,
           logoUrl: cards.logoUrl,
           cardImageUrl: cards.cardImageUrl,
-          isPinned: cards.isPinned,
+          isPinned: sql<boolean>`false`,
           expiresAt: cards.expiresAt,
           isActive: cards.isActive,
           createdAt: cards.createdAt,

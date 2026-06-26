@@ -179,7 +179,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   barcodeWrap: {
-    flex: 1,
+    height: 52,
     justifyContent: 'center',
     alignItems: 'flex-start',
     marginVertical: 6,

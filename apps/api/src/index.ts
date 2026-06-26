@@ -15,6 +15,7 @@ import shopRoutes from './routes/shops.js'
 import adminRoutes from './routes/admin.js'
 import publicShareRoutes from './routes/public-shares.js'
 import cardOrderRoutes from './routes/card-order.js'
+import versionRoutes from './routes/version.js'
 
 const app = Fastify({
   logger: {
@@ -45,6 +46,7 @@ async function start() {
   await app.register(adminRoutes, { prefix: '/api/v1/admin' })
   await app.register(publicShareRoutes, { prefix: '/api/v1' })
   await app.register(cardOrderRoutes, { prefix: '/api/v1/card-order' })
+  await app.register(versionRoutes, { prefix: '/api/v1/version' })
 
   app.get('/health', { config: { public: true } }, () => ({ ok: true }))
 

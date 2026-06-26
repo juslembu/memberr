@@ -123,6 +123,11 @@ export interface PublicCardView {
   logoUrl: string | null
 }
 
+export interface ServerVersion {
+  serverVersion: string
+  minAppVersion: string
+}
+
 export interface SharedCard {
   shareId: string
   isPinned: boolean

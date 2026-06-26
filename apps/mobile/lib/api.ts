@@ -1,5 +1,6 @@
 import * as SecureStore from 'expo-secure-store'
 import { Platform } from 'react-native'
+import Constants from 'expo-constants'
 import { getServerUrl } from './serverUrl'
 import type {
   User,
@@ -7,6 +8,7 @@ import type {
   CardShare,
   Invitation,
   SharedCard,
+  ServerVersion,
   PublicShare,
   PublicCardView,
   PredefinedShop,
@@ -19,6 +21,8 @@ import type {
   UpdateProfileInput,
   CreateShopInput,
 } from '@memberr/shared'
+
+const APP_VERSION = Constants.expoConfig?.version ?? '1.0.0'
 
 const ACCESS_TOKEN_KEY = 'memberr_access_token'
 
@@ -42,6 +46,7 @@ async function fetchWithAuth(path: string, options: RequestInit = {}): Promise<R
   const token = await getAccessToken()
   const hasBody = options.body != null
   const headers: Record<string, string> = {
+    'X-App-Version': APP_VERSION,
     ...(hasBody ? { 'Content-Type': 'application/json' } : {}),
     ...(options.headers as Record<string, string>),
   }
@@ -89,7 +94,19 @@ async function json<T>(res: Response): Promise<T> {
   return res.json() as Promise<T>
 }
 
+export { APP_VERSION }
+
 export const api = {
+  version: {
+    async check(): Promise<ServerVersion> {
+      const API_URL = await getServerUrl()
+      const res = await fetch(`${API_URL}/api/v1/version`, {
+        headers: { 'X-App-Version': APP_VERSION },
+      })
+      return json<ServerVersion>(res)
+    },
+  },
+
   auth: {
     async register(data: RegisterInput): Promise<{ user: User; accessToken: string }> {
       const API_URL = await getServerUrl()

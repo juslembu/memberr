@@ -89,13 +89,22 @@ export default function RootLayout() {
   const [versionOk, setVersionOk] = useState<boolean | null>(Platform.OS === 'web' ? true : null)
   const [minVersion, setMinVersion] = useState('1.0.0')
   useEffect(() => {
-    if (Platform.OS === 'web' || !serverConfigured) return
-    api.version.check()
+    if (Platform.OS === 'web' || serverConfigured === null) return
+    if (!serverConfigured) {
+      // No server URL yet — server-setup screen will show, skip version check
+      setVersionOk(true)
+      return
+    }
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 8000)
+    api.version.check(controller.signal)
       .then(({ minAppVersion }) => {
         setMinVersion(minAppVersion)
         setVersionOk(meetsMinVersion(APP_VERSION, minAppVersion))
       })
-      .catch(() => setVersionOk(true)) // fail open: don't lock out on network error
+      .catch(() => setVersionOk(true)) // fail open: unreachable server or old server without endpoint
+      .finally(() => clearTimeout(timeout))
+    return () => { controller.abort(); clearTimeout(timeout) }
   }, [serverConfigured])
 
   useEffect(() => {

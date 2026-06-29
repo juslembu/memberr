@@ -98,10 +98,11 @@ export { APP_VERSION }
 
 export const api = {
   version: {
-    async check(): Promise<ServerVersion> {
+    async check(signal?: AbortSignal): Promise<ServerVersion> {
       const API_URL = await getServerUrl()
       const res = await fetch(`${API_URL}/api/v1/version`, {
         headers: { 'X-App-Version': APP_VERSION },
+        signal,
       })
       return json<ServerVersion>(res)
     },

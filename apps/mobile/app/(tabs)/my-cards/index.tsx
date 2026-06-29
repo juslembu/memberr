@@ -158,14 +158,6 @@ export default function MyCardsScreen() {
                 onPress={() => setFilter(f)}
                 disabled={reorderMode}
               >
-                {f === 'pinned' && (
-                  <Ionicons
-                    name="bookmark"
-                    size={11}
-                    color={filter === f ? t.accent : t.textMuted}
-                    style={{ marginRight: 3 }}
-                  />
-                )}
                 <Text style={[styles.filterChipText, filter === f && styles.filterChipTextActive]}>
                   {f === 'all' ? 'All' : f === 'mine' ? 'Mine' : f === 'shared' ? 'Shared' : 'Pinned'}
                 </Text>

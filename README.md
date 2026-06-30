@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="apps/mobile/assets/images/icon.png" width="96" alt="Memberr icon" />
+  <img src="apps/mobile/assets/images/adaptive-icon.png" width="96" alt="Memberr icon" />
 </p>
 
 <h1 align="center">Memberr</h1>

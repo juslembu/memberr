@@ -32,8 +32,7 @@ function itemSharedBy(item: ListItem): string | null {
 }
 
 function topOf(index: number, pc: number): number {
-  // Unpinned items (index >= pc) are offset by the divider height
-  return index * SLOT_HEIGHT + (pc > 0 && pc < Infinity && index >= pc ? DIVIDER_HEIGHT : 0)
+  return index * SLOT_HEIGHT + (pc > 0 && index >= pc ? DIVIDER_HEIGHT : 0)
 }
 
 export function ReorderableCardList({ items, onReorder, pinnedCount = 0 }: Props) {
@@ -45,7 +44,14 @@ export function ReorderableCardList({ items, onReorder, pinnedCount = 0 }: Props
 
   const activeIndex = useRef<number | null>(null)
   const hoverIndex = useRef<number | null>(null)
-  const [activeKey, setActiveKey] = useState<string | null>(null)
+
+  // Use a ref (not state) for the active key so that clearing it before
+  // setData() means both changes land in a single render — avoiding the
+  // intermediate frame on Android where the dragged item snaps back to its
+  // old top position and creates a visible gap.
+  const activeKeyRef = useRef<string | null>(null)
+  const [, forceRender] = useState(0)
+
   const dragY = useRef(new Animated.Value(0)).current
   const rowOffsets = useRef<Animated.Value[]>([]).current
 
@@ -62,7 +68,6 @@ export function ReorderableCardList({ items, onReorder, pinnedCount = 0 }: Props
     const from = activeIndex.current
     if (from == null) return
 
-    // Clamp drag within the same section (pinned stays pinned, unpinned stays unpinned)
     const inPinned = from < pc
     const newHover = inPinned
       ? Math.max(0, Math.min(pc - 1, rawHover))
@@ -73,7 +78,6 @@ export function ReorderableCardList({ items, onReorder, pinnedCount = 0 }: Props
 
     rowOffsets.forEach((v, idx) => {
       if (idx === from) return
-      // Only shift items within the same section
       const sameSection = inPinned ? idx < pc : idx >= pc
       if (!sameSection) { v.setValue(0); return }
 
@@ -89,15 +93,20 @@ export function ReorderableCardList({ items, onReorder, pinnedCount = 0 }: Props
     const to = hoverIndex.current
     activeIndex.current = null
     hoverIndex.current = null
-    setActiveKey(null)
-    Animated.timing(dragY, { toValue: 0, duration: 150, useNativeDriver: false }).start()
+    // Clear the active key via ref BEFORE triggering any re-render so the
+    // single render from setData (or forceRender) sees activeKey = null.
+    activeKeyRef.current = null
+    dragY.setValue(0)
     resetOffsets()
+
     if (from != null && to != null && from !== to) {
       const next = [...data]
       const [moved] = next.splice(from, 1)
       next.splice(to, 0, moved)
-      setData(next)
+      setData(next) // ONE render: new positions + no active item
       onReorder(next)
+    } else {
+      forceRender((n) => n + 1) // ONE render: clear active highlight only
     }
   }
 
@@ -108,8 +117,9 @@ export function ReorderableCardList({ items, onReorder, pinnedCount = 0 }: Props
       onPanResponderGrant: () => {
         activeIndex.current = index
         hoverIndex.current = index
-        setActiveKey(itemKey(data[index]))
+        activeKeyRef.current = itemKey(data[index])
         dragY.setValue(0)
+        forceRender((n) => n + 1)
       },
       onPanResponderMove: (_, gesture) => {
         dragY.setValue(gesture.dy)
@@ -136,7 +146,7 @@ export function ReorderableCardList({ items, onReorder, pinnedCount = 0 }: Props
       )}
       {data.map((item, index) => {
         const key = itemKey(item)
-        const isActive = activeKey === key
+        const isActive = activeKeyRef.current === key
         const translateY = isActive ? dragY : rowOffsets[index]
         const isPinned = index < pc
         return (

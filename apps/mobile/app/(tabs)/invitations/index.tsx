@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useMemo, useState, useCallback } from 'react'
 import {
   View,
   Text,
@@ -11,11 +11,47 @@ import {
 import { useFocusEffect } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { api, ApiError } from '../../../lib/api'
-import { t } from '../../../lib/theme'
+import { useTheme } from '../../../lib/ThemeContext'
+import type { Theme } from '../../../lib/theme'
 import { triggerBadgeRefresh } from '../../../lib/invitationsBadge'
 import type { Invitation } from '@memberr/shared'
 
+function makeStyles(t: Theme) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: t.bg },
+    center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: t.bg },
+    list: { padding: 16 },
+    errorBanner: { backgroundColor: t.errorBg, padding: 12, margin: 16, marginBottom: 0, borderRadius: 10 },
+    errorText: { color: t.errorText, fontSize: 14, textAlign: 'center' },
+    empty: { alignItems: 'center', paddingTop: 72, paddingHorizontal: 32, gap: 10 },
+    emptyIconWrap: {
+      width: 72, height: 72, borderRadius: 36,
+      backgroundColor: t.surface, borderWidth: 1, borderColor: t.border,
+      justifyContent: 'center', alignItems: 'center', marginBottom: 4,
+    },
+    emptyTitle: { fontSize: 18, fontWeight: '700', color: t.text, letterSpacing: -0.3 },
+    emptySub: { fontSize: 14, color: t.textMuted, textAlign: 'center', lineHeight: 20 },
+    card: {
+      backgroundColor: t.surface, borderRadius: 12, marginBottom: 12, overflow: 'hidden',
+      flexDirection: 'row', alignItems: 'center',
+      shadowColor: t.text, shadowOpacity: 0.06, shadowRadius: 6,
+      shadowOffset: { width: 0, height: 2 }, elevation: 2,
+    },
+    cardAccent: { width: 4, alignSelf: 'stretch' },
+    cardBody: { flex: 1, padding: 16 },
+    storeName: { fontSize: 16, fontWeight: '700', color: t.text, letterSpacing: -0.2 },
+    from: { fontSize: 13, color: t.textMuted, marginTop: 2 },
+    actions: { flexDirection: 'column', gap: 6, paddingVertical: 14, paddingRight: 16 },
+    acceptBtn: { backgroundColor: t.accent, borderRadius: 8, paddingVertical: 7, paddingHorizontal: 14 },
+    acceptText: { color: '#fff', fontWeight: '600', fontSize: 13 },
+    declineBtn: { borderWidth: 1, borderColor: t.border, borderRadius: 8, paddingVertical: 7, paddingHorizontal: 14 },
+    declineText: { color: t.textMuted, fontSize: 13 },
+  })
+}
+
 export default function InvitationsScreen() {
+  const t = useTheme()
+  const styles = useMemo(() => makeStyles(t), [t])
   const [invitations, setInvitations] = useState<Invitation[]>([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
@@ -116,43 +152,3 @@ export default function InvitationsScreen() {
     </View>
   )
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: t.bg },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: t.bg },
-  list: { padding: 16 },
-  errorBanner: {
-    backgroundColor: t.errorBg, padding: 12, margin: 16, marginBottom: 0,
-    borderRadius: 10,
-  },
-  errorText: { color: t.errorText, fontSize: 14, textAlign: 'center' },
-  empty: { alignItems: 'center', paddingTop: 72, paddingHorizontal: 32, gap: 10 },
-  emptyIconWrap: {
-    width: 72, height: 72, borderRadius: 36,
-    backgroundColor: t.surface, borderWidth: 1, borderColor: t.border,
-    justifyContent: 'center', alignItems: 'center', marginBottom: 4,
-  },
-  emptyTitle: { fontSize: 18, fontWeight: '700', color: t.text, letterSpacing: -0.3 },
-  emptySub: { fontSize: 14, color: t.textMuted, textAlign: 'center', lineHeight: 20 },
-  card: {
-    backgroundColor: t.surface, borderRadius: 12, marginBottom: 12, overflow: 'hidden',
-    flexDirection: 'row', alignItems: 'center',
-    shadowColor: t.text, shadowOpacity: 0.06, shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 }, elevation: 2,
-  },
-  cardAccent: { width: 4, alignSelf: 'stretch' },
-  cardBody: { flex: 1, padding: 16 },
-  storeName: { fontSize: 16, fontWeight: '700', color: t.text, letterSpacing: -0.2 },
-  from: { fontSize: 13, color: t.textMuted, marginTop: 2 },
-  actions: { flexDirection: 'column', gap: 6, paddingVertical: 14, paddingRight: 16 },
-  acceptBtn: {
-    backgroundColor: t.accent, borderRadius: 8,
-    paddingVertical: 7, paddingHorizontal: 14,
-  },
-  acceptText: { color: '#fff', fontWeight: '600', fontSize: 13 },
-  declineBtn: {
-    borderWidth: 1, borderColor: t.border, borderRadius: 8,
-    paddingVertical: 7, paddingHorizontal: 14,
-  },
-  declineText: { color: t.textMuted, fontSize: 13 },
-})

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import {
   View,
   Text,
@@ -16,13 +16,106 @@ import { Ionicons } from '@expo/vector-icons'
 import { useAuth } from '../../../hooks/useAuth'
 import { api, ApiError } from '../../../lib/api'
 import { getServerUrl, clearServerUrl } from '../../../lib/serverUrl'
-import { t } from '../../../lib/theme'
+import { useTheme } from '../../../lib/ThemeContext'
+import { useThemePref, ThemePref } from '../../../lib/ThemeContext'
+import type { Theme } from '../../../lib/theme'
 
 const GITHUB_URL = 'https://github.com/juslembu/memberr'
 
 const webCursor = Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : {}
 
+function makeStyles(t: Theme) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: t.bg },
+    content: { paddingBottom: 48 },
+
+    profileSection: { alignItems: 'center', paddingTop: 40, paddingBottom: 32, paddingHorizontal: 24 },
+    avatar: {
+      width: 80, height: 80, borderRadius: 40, backgroundColor: t.accent,
+      justifyContent: 'center', alignItems: 'center', marginBottom: 16,
+      shadowColor: t.accent, shadowOpacity: 0.3, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 6,
+    },
+    avatarText: { fontSize: 28, fontWeight: '700', color: '#fff', letterSpacing: -0.5 },
+    name: { fontSize: 22, fontWeight: '700', color: t.text, letterSpacing: -0.4, marginBottom: 4 },
+    email: { fontSize: 14, color: t.textMuted },
+
+    infoSection: { marginHorizontal: 16, backgroundColor: t.surface, borderRadius: 14, borderWidth: 1, borderColor: t.border, overflow: 'hidden' },
+    actionsSection: { marginHorizontal: 16, marginTop: 12, backgroundColor: t.surface, borderRadius: 14, borderWidth: 1, borderColor: t.border, overflow: 'hidden' },
+    row: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14 },
+    actionRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 16 },
+    rowIcon: { marginRight: 14 },
+    rowContent: { flex: 1 },
+    rowLabel: { fontSize: 11, fontWeight: '600', color: t.textSubtle, textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 2 },
+    rowValue: { fontSize: 15, color: t.text, fontWeight: '500' },
+    actionText: { flex: 1, fontSize: 15, fontWeight: '600', color: t.text },
+    divider: { height: 1, backgroundColor: t.border, marginLeft: 48 },
+
+    segmented: {
+      flexDirection: 'row', borderRadius: 8, borderWidth: 1, borderColor: t.border,
+      overflow: 'hidden', backgroundColor: t.bg,
+    },
+    segBtn: { paddingHorizontal: 11, paddingVertical: 6 },
+    segBtnActive: { backgroundColor: t.accent },
+    segText: { fontSize: 12, fontWeight: '600', color: t.textMuted },
+    segTextActive: { color: '#fff' },
+
+    adminBtn: {
+      flexDirection: 'row', alignItems: 'center', gap: 10, marginHorizontal: 16, marginTop: 12,
+      backgroundColor: t.surface, borderRadius: 14, borderWidth: 1, borderColor: t.border,
+      paddingVertical: 16, paddingHorizontal: 20,
+    },
+    adminBtnText: { fontSize: 16, fontWeight: '600', color: t.text },
+    logoutBtn: {
+      flexDirection: 'row', alignItems: 'center', gap: 10, marginHorizontal: 16, marginTop: 12,
+      backgroundColor: t.surface, borderRadius: 14, borderWidth: 1, borderColor: '#FEE2E2',
+      paddingVertical: 16, paddingHorizontal: 20,
+    },
+    logoutText: { fontSize: 16, fontWeight: '600', color: '#DC2626' },
+
+    ossSection: {
+      marginHorizontal: 16, marginTop: 28, paddingTop: 24,
+      borderTopWidth: 1, borderTopColor: t.border,
+      alignItems: 'center', gap: 4,
+    },
+    ossTitle: { fontSize: 13, fontWeight: '700', color: t.textMuted, letterSpacing: -0.1 },
+    ossBody: { fontSize: 12, color: t.textSubtle, textAlign: 'center', marginBottom: 12 },
+    githubBtn: {
+      flexDirection: 'row', alignItems: 'center', gap: 8,
+      borderWidth: 1, borderColor: t.border, borderRadius: 20,
+      paddingVertical: 9, paddingHorizontal: 18,
+      backgroundColor: t.surface,
+    },
+    githubText: { fontSize: 14, fontWeight: '600', color: t.text },
+    githubExternal: { marginLeft: 2 },
+
+    overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center', padding: 24 },
+    dialog: {
+      backgroundColor: t.surface, borderRadius: 16, padding: 24, width: '100%', maxWidth: 400,
+      shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 20, shadowOffset: { width: 0, height: 8 }, elevation: 12,
+    },
+    dialogTitle: { fontSize: 18, fontWeight: '700', color: t.text, marginBottom: 16, letterSpacing: -0.3 },
+    dialogBody: { fontSize: 14, color: t.textMuted, lineHeight: 20, marginBottom: 20 },
+    errorBox: { backgroundColor: t.errorBg, borderRadius: 8, padding: 10, marginBottom: 12 },
+    errorText: { color: t.errorText, fontSize: 13, textAlign: 'center' },
+    fieldLabel: { fontSize: 12, fontWeight: '600', color: t.textMuted, marginBottom: 6, marginTop: 8 },
+    input: {
+      borderWidth: 1, borderColor: t.border, borderRadius: 10,
+      paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, color: t.text, backgroundColor: t.bg, marginBottom: 4,
+    },
+    dialogActions: { flexDirection: 'row', gap: 10, marginTop: 20 },
+    cancelBtn: { flex: 1, paddingVertical: 12, borderRadius: 10, borderWidth: 1, borderColor: t.border, alignItems: 'center' },
+    cancelText: { fontSize: 15, fontWeight: '600', color: t.text },
+    confirmBtn: { flex: 1, paddingVertical: 12, borderRadius: 10, backgroundColor: t.accent, alignItems: 'center' },
+    confirmBtnRed: { backgroundColor: '#DC2626' },
+    btnDisabled: { opacity: 0.6 },
+    confirmText: { fontSize: 15, fontWeight: '600', color: '#fff' },
+  })
+}
+
 export default function AccountScreen() {
+  const t = useTheme()
+  const styles = useMemo(() => makeStyles(t), [t])
+  const { pref, setPref } = useThemePref()
   const { user, setUser, logout } = useAuth()
   const router = useRouter()
 
@@ -194,6 +287,26 @@ export default function AccountScreen() {
           <Text style={styles.actionText}>Change password</Text>
           <Ionicons name="chevron-forward" size={16} color={t.textSubtle} />
         </TouchableOpacity>
+        <View style={styles.divider} />
+        <View style={[styles.actionRow, { justifyContent: 'space-between' }]}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+            <Ionicons name="contrast-outline" size={18} color={t.textMuted} />
+            <Text style={styles.actionText}>Appearance</Text>
+          </View>
+          <View style={styles.segmented}>
+            {(['light', 'system', 'dark'] as ThemePref[]).map(p => (
+              <TouchableOpacity
+                key={p}
+                style={[styles.segBtn, pref === p && styles.segBtnActive, webCursor]}
+                onPress={() => setPref(p)}
+              >
+                <Text style={[styles.segText, pref === p && styles.segTextActive]}>
+                  {p === 'light' ? 'Light' : p === 'system' ? 'Auto' : 'Dark'}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
       </View>
 
       {user?.isAdmin && (
@@ -362,80 +475,3 @@ export default function AccountScreen() {
     </ScrollView>
   )
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: t.bg },
-  content: { paddingBottom: 48 },
-
-  profileSection: { alignItems: 'center', paddingTop: 40, paddingBottom: 32, paddingHorizontal: 24 },
-  avatar: {
-    width: 80, height: 80, borderRadius: 40, backgroundColor: t.accent,
-    justifyContent: 'center', alignItems: 'center', marginBottom: 16,
-    shadowColor: t.accent, shadowOpacity: 0.3, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 6,
-  },
-  avatarText: { fontSize: 28, fontWeight: '700', color: '#fff', letterSpacing: -0.5 },
-  name: { fontSize: 22, fontWeight: '700', color: t.text, letterSpacing: -0.4, marginBottom: 4 },
-  email: { fontSize: 14, color: t.textMuted },
-
-  infoSection: { marginHorizontal: 16, backgroundColor: t.surface, borderRadius: 14, borderWidth: 1, borderColor: t.border, overflow: 'hidden' },
-  actionsSection: { marginHorizontal: 16, marginTop: 12, backgroundColor: t.surface, borderRadius: 14, borderWidth: 1, borderColor: t.border, overflow: 'hidden' },
-  row: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14 },
-  actionRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 16 },
-  rowIcon: { marginRight: 14 },
-  rowContent: { flex: 1 },
-  rowLabel: { fontSize: 11, fontWeight: '600', color: t.textSubtle, textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 2 },
-  rowValue: { fontSize: 15, color: t.text, fontWeight: '500' },
-  actionText: { flex: 1, fontSize: 15, fontWeight: '600', color: t.text },
-  divider: { height: 1, backgroundColor: t.border, marginLeft: 48 },
-
-  adminBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 10, marginHorizontal: 16, marginTop: 12,
-    backgroundColor: t.surface, borderRadius: 14, borderWidth: 1, borderColor: t.border,
-    paddingVertical: 16, paddingHorizontal: 20,
-  },
-  adminBtnText: { fontSize: 16, fontWeight: '600', color: t.text },
-  logoutBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 10, marginHorizontal: 16, marginTop: 12,
-    backgroundColor: t.surface, borderRadius: 14, borderWidth: 1, borderColor: '#FEE2E2',
-    paddingVertical: 16, paddingHorizontal: 20,
-  },
-  logoutText: { fontSize: 16, fontWeight: '600', color: '#DC2626' },
-
-  ossSection: {
-    marginHorizontal: 16, marginTop: 28, paddingTop: 24,
-    borderTopWidth: 1, borderTopColor: t.border,
-    alignItems: 'center', gap: 4,
-  },
-  ossTitle: { fontSize: 13, fontWeight: '700', color: t.textMuted, letterSpacing: -0.1 },
-  ossBody: { fontSize: 12, color: t.textSubtle, textAlign: 'center', marginBottom: 12 },
-  githubBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    borderWidth: 1, borderColor: t.border, borderRadius: 20,
-    paddingVertical: 9, paddingHorizontal: 18,
-    backgroundColor: t.surface,
-  },
-  githubText: { fontSize: 14, fontWeight: '600', color: t.text },
-  githubExternal: { marginLeft: 2 },
-
-  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center', padding: 24 },
-  dialog: {
-    backgroundColor: t.surface, borderRadius: 16, padding: 24, width: '100%', maxWidth: 400,
-    shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 20, shadowOffset: { width: 0, height: 8 }, elevation: 12,
-  },
-  dialogTitle: { fontSize: 18, fontWeight: '700', color: t.text, marginBottom: 16, letterSpacing: -0.3 },
-  dialogBody: { fontSize: 14, color: t.textMuted, lineHeight: 20, marginBottom: 20 },
-  errorBox: { backgroundColor: t.errorBg, borderRadius: 8, padding: 10, marginBottom: 12 },
-  errorText: { color: t.errorText, fontSize: 13, textAlign: 'center' },
-  fieldLabel: { fontSize: 12, fontWeight: '600', color: t.textMuted, marginBottom: 6, marginTop: 8 },
-  input: {
-    borderWidth: 1, borderColor: t.border, borderRadius: 10,
-    paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, color: t.text, backgroundColor: t.bg, marginBottom: 4,
-  },
-  dialogActions: { flexDirection: 'row', gap: 10, marginTop: 20 },
-  cancelBtn: { flex: 1, paddingVertical: 12, borderRadius: 10, borderWidth: 1, borderColor: t.border, alignItems: 'center' },
-  cancelText: { fontSize: 15, fontWeight: '600', color: t.text },
-  confirmBtn: { flex: 1, paddingVertical: 12, borderRadius: 10, backgroundColor: t.accent, alignItems: 'center' },
-  confirmBtnRed: { backgroundColor: '#DC2626' },
-  btnDisabled: { opacity: 0.6 },
-  confirmText: { fontSize: 15, fontWeight: '600', color: '#fff' },
-})

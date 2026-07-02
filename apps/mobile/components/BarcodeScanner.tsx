@@ -1,8 +1,10 @@
-import { useEffect } from 'react'
+import { useMemo, useEffect } from 'react'
 import { View, Text, Pressable, StyleSheet, Platform } from 'react-native'
 import { CameraView, useCameraPermissions, type BarcodeScanningResult } from 'expo-camera'
 import { Ionicons } from '@expo/vector-icons'
 import type { BarcodeType } from '@memberr/shared'
+import { useTheme } from '../lib/ThemeContext'
+import type { Theme } from '../lib/theme'
 
 interface Props {
   onScanned: (type: BarcodeType, value: string) => void
@@ -25,7 +27,47 @@ const CAMERA_TYPE_MAP: Record<string, BarcodeType> = {
   upc_e: 'UPC',
 }
 
+const CORNER = 24
+const BORDER = 3
+
+function makeStyles(t: Theme) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: '#000' },
+    overlay: { ...StyleSheet.absoluteFillObject, justifyContent: 'space-between', paddingBottom: 60 },
+    topBar: {
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+      paddingHorizontal: 16, paddingTop: 56, paddingBottom: 16,
+      backgroundColor: 'rgba(0,0,0,0.45)',
+    },
+    closeBtn: { width: 44, height: 44, justifyContent: 'center', alignItems: 'center' },
+    topBarTitle: { color: '#fff', fontSize: 17, fontWeight: '600' },
+    scanArea: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+    scanFrame: { width: 260, height: 160, position: 'relative' },
+    corner: { position: 'absolute', width: CORNER, height: CORNER, borderColor: t.accent },
+    cornerTL: { top: 0, left: 0, borderTopWidth: BORDER, borderLeftWidth: BORDER },
+    cornerTR: { top: 0, right: 0, borderTopWidth: BORDER, borderRightWidth: BORDER },
+    cornerBL: { bottom: 0, left: 0, borderBottomWidth: BORDER, borderLeftWidth: BORDER },
+    cornerBR: { bottom: 0, right: 0, borderBottomWidth: BORDER, borderRightWidth: BORDER },
+    hint: { color: 'rgba(255,255,255,0.8)', textAlign: 'center', fontSize: 14, paddingHorizontal: 40 },
+    permissionBox: {
+      flex: 1, justifyContent: 'center', alignItems: 'center',
+      padding: 32, gap: 12, backgroundColor: t.bg,
+    },
+    permissionTitle: { fontSize: 20, fontWeight: '700', color: t.text, textAlign: 'center' },
+    permissionSub: { fontSize: 15, color: t.textMuted, textAlign: 'center' },
+    permissionBtn: {
+      backgroundColor: t.accent, borderRadius: 12,
+      paddingVertical: 14, paddingHorizontal: 32, marginTop: 8,
+    },
+    permissionBtnText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+    cancelLink: { paddingVertical: 12 },
+    cancelLinkText: { color: t.textMuted, fontSize: 15 },
+  })
+}
+
 export function BarcodeScanner({ onScanned, onCancel }: Props) {
+  const t = useTheme()
+  const styles = useMemo(() => makeStyles(t), [t])
   const [permission, requestPermission] = useCameraPermissions()
 
   useEffect(() => {
@@ -42,7 +84,7 @@ export function BarcodeScanner({ onScanned, onCancel }: Props) {
   if (!permission.granted) {
     return (
       <View style={styles.permissionBox}>
-        <Ionicons name="camera-outline" size={48} color="#6366f1" />
+        <Ionicons name="camera-outline" size={48} color={t.accent} />
         <Text style={styles.permissionTitle}>Camera access needed</Text>
         <Text style={styles.permissionSub}>Allow camera access to scan barcodes</Text>
         <Pressable style={styles.permissionBtn} onPress={requestPermission}>
@@ -90,46 +132,3 @@ export function BarcodeScanner({ onScanned, onCancel }: Props) {
     </View>
   )
 }
-
-const CORNER = 24
-const BORDER = 3
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#000' },
-  overlay: { ...StyleSheet.absoluteFillObject, justifyContent: 'space-between', paddingBottom: 60 },
-  topBar: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 16, paddingTop: 56, paddingBottom: 16,
-    backgroundColor: 'rgba(0,0,0,0.45)',
-  },
-  closeBtn: { width: 44, height: 44, justifyContent: 'center', alignItems: 'center' },
-  topBarTitle: { color: '#fff', fontSize: 17, fontWeight: '600' },
-  scanArea: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  scanFrame: {
-    width: 260, height: 160, position: 'relative',
-  },
-  corner: {
-    position: 'absolute', width: CORNER, height: CORNER, borderColor: '#6366f1',
-  },
-  cornerTL: { top: 0, left: 0, borderTopWidth: BORDER, borderLeftWidth: BORDER },
-  cornerTR: { top: 0, right: 0, borderTopWidth: BORDER, borderRightWidth: BORDER },
-  cornerBL: { bottom: 0, left: 0, borderBottomWidth: BORDER, borderLeftWidth: BORDER },
-  cornerBR: { bottom: 0, right: 0, borderBottomWidth: BORDER, borderRightWidth: BORDER },
-  hint: {
-    color: 'rgba(255,255,255,0.8)', textAlign: 'center',
-    fontSize: 14, paddingHorizontal: 40,
-  },
-  permissionBox: {
-    flex: 1, justifyContent: 'center', alignItems: 'center',
-    padding: 32, gap: 12, backgroundColor: '#f9fafb',
-  },
-  permissionTitle: { fontSize: 20, fontWeight: '700', color: '#111827', textAlign: 'center' },
-  permissionSub: { fontSize: 15, color: '#6b7280', textAlign: 'center' },
-  permissionBtn: {
-    backgroundColor: '#6366f1', borderRadius: 12,
-    paddingVertical: 14, paddingHorizontal: 32, marginTop: 8,
-  },
-  permissionBtnText: { color: '#fff', fontSize: 16, fontWeight: '600' },
-  cancelLink: { paddingVertical: 12 },
-  cancelLinkText: { color: '#6b7280', fontSize: 15 },
-})

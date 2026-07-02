@@ -1,11 +1,12 @@
 import { useEffect } from 'react'
 import { Stack, router } from 'expo-router'
 import { useAuth } from '../../hooks/useAuth'
-import { t } from '../../lib/theme'
+import { useTheme } from '../../lib/ThemeContext'
 import { HeaderTitle } from '../../components/HeaderTitle'
 
 export default function AdminLayout() {
   const { user } = useAuth()
+  const t = useTheme()
 
   useEffect(() => {
     if (user && !user.isAdmin) {

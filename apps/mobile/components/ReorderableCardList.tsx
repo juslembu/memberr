@@ -1,7 +1,8 @@
-import { useRef, useState, useEffect } from 'react'
+import { useMemo, useRef, useState, useEffect } from 'react'
 import { View, Text, StyleSheet, Animated, PanResponder, Platform } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
-import { t } from '../lib/theme'
+import { useTheme } from '../lib/ThemeContext'
+import type { Theme } from '../lib/theme'
 import type { Card, SharedCard } from '@memberr/shared'
 
 export type ListItem =
@@ -25,7 +26,7 @@ function itemStoreName(item: ListItem): string {
   return item.kind === 'own' ? item.card.storeName : item.data.card.storeName
 }
 function itemColor(item: ListItem): string {
-  return (item.kind === 'own' ? item.card.color : item.data.card.color) ?? t.accent
+  return (item.kind === 'own' ? item.card.color : item.data.card.color) ?? '#0EA5E9'
 }
 function itemSharedBy(item: ListItem): string | null {
   return item.kind === 'shared' ? (item.data.grantedBy.displayName ?? item.data.grantedBy.username) : null
@@ -35,7 +36,49 @@ function topOf(index: number, pc: number): number {
   return index * SLOT_HEIGHT + (pc > 0 && index >= pc ? DIVIDER_HEIGHT : 0)
 }
 
+function makeStyles(t: Theme) {
+  return StyleSheet.create({
+    row: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      height: ROW_HEIGHT,
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: t.surface,
+      borderRadius: 12,
+      paddingHorizontal: 12,
+      borderWidth: 1,
+      borderColor: t.border,
+      gap: 12,
+      shadowColor: '#0F172A',
+      shadowOpacity: 0.06,
+      shadowRadius: 6,
+      shadowOffset: { width: 0, height: 2 },
+      elevation: 2,
+    },
+    pinIcon: { marginRight: -4 },
+    swatch: { width: 34, height: 34, borderRadius: 8 },
+    info: { flex: 1 },
+    name: { fontSize: 14, fontWeight: '700', color: t.text },
+    sharedBy: { fontSize: 11, color: t.textSubtle, marginTop: 1 },
+    handle: {
+      padding: 8,
+      ...(Platform.OS === 'web' ? ({ cursor: 'grab' } as any) : {}),
+    },
+    divider: {
+      position: 'absolute', left: 0, right: 0, height: DIVIDER_HEIGHT,
+      flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 4,
+    },
+    dividerLine: { flex: 1, height: 1, backgroundColor: t.border },
+    dividerLabel: { fontSize: 11, fontWeight: '600', color: t.textSubtle, textTransform: 'uppercase', letterSpacing: 0.8 },
+  })
+}
+
 export function ReorderableCardList({ items, onReorder, pinnedCount = 0 }: Props) {
+  const t = useTheme()
+  const styles = useMemo(() => makeStyles(t), [t])
+
   const [data, setData] = useState(items)
   useEffect(() => { setData(items) }, [items])
 
@@ -181,46 +224,3 @@ export function ReorderableCardList({ items, onReorder, pinnedCount = 0 }: Props
     </View>
   )
 }
-
-const styles = StyleSheet.create({
-  row: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    height: ROW_HEIGHT,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: t.surface,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    borderWidth: 1,
-    borderColor: t.border,
-    gap: 12,
-    shadowColor: '#0F172A',
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
-  },
-  pinIcon: { marginRight: -4 },
-  swatch: { width: 34, height: 34, borderRadius: 8 },
-  info: { flex: 1 },
-  name: { fontSize: 14, fontWeight: '700', color: t.text },
-  sharedBy: { fontSize: 11, color: t.textSubtle, marginTop: 1 },
-  handle: {
-    padding: 8,
-    ...(Platform.OS === 'web' ? ({ cursor: 'grab' } as any) : {}),
-  },
-  divider: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    height: DIVIDER_HEIGHT,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 4,
-  },
-  dividerLine: { flex: 1, height: 1, backgroundColor: t.border },
-  dividerLabel: { fontSize: 11, fontWeight: '600', color: t.textSubtle, textTransform: 'uppercase', letterSpacing: 0.8 },
-})

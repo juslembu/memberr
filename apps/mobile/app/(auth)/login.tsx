@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import {
   View,
   Text,
@@ -14,9 +14,53 @@ import { Link } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { useAuth } from '../../hooks/useAuth'
 import { ApiError } from '../../lib/api'
-import { t } from '../../lib/theme'
+import { useTheme } from '../../lib/ThemeContext'
+import type { Theme } from '../../lib/theme'
+
+function makeStyles(t: Theme) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: t.surface },
+    inner: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: 28, paddingVertical: 40 },
+
+    logo: {
+      fontSize: 42, fontWeight: '800', color: t.brand, textAlign: 'center',
+      marginBottom: 6, letterSpacing: -1.5,
+    },
+    subtitle: { fontSize: 15, color: t.textMuted, textAlign: 'center', marginBottom: 40, lineHeight: 22 },
+
+    splitContainer: { flex: 1, flexDirection: 'row' },
+    leftPanel: { flex: 1, backgroundColor: t.brand, padding: 52, justifyContent: 'flex-end', paddingBottom: 60 },
+    panelWordmark: { fontSize: 64, fontWeight: '800', color: '#fff', letterSpacing: -2.5, lineHeight: 68, marginBottom: 16 },
+    panelTagline: { fontSize: 18, color: 'rgba(255,255,255,0.4)', lineHeight: 28 },
+    rightPanel: { flex: 1, backgroundColor: t.surface, justifyContent: 'center', alignItems: 'center', padding: 48 },
+    formBox: { width: '100%', maxWidth: 360 },
+    formTitle: { fontSize: 28, fontWeight: '800', color: t.text, letterSpacing: -0.5, marginBottom: 28 },
+
+    errorBox: { backgroundColor: t.errorBg, borderRadius: 10, padding: 12, marginBottom: 12 },
+    errorText: { color: t.errorText, fontSize: 14, textAlign: 'center' },
+    input: {
+      borderWidth: 1, borderColor: t.border, borderRadius: 10,
+      paddingHorizontal: 16, paddingVertical: 14, fontSize: 16, marginBottom: 10,
+      color: t.text, backgroundColor: t.surface,
+    },
+    passwordField: {
+      flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: t.border,
+      borderRadius: 10, marginBottom: 10, backgroundColor: t.surface,
+    },
+    passwordInput: { flex: 1, paddingHorizontal: 16, paddingVertical: 14, fontSize: 16, color: t.text },
+    peekButton: { paddingHorizontal: 14, paddingVertical: 14 },
+    button: { backgroundColor: t.accent, borderRadius: 10, paddingVertical: 15, alignItems: 'center', marginTop: 6 },
+    buttonDisabled: { opacity: 0.6 },
+    buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+    footer: { flexDirection: 'row', justifyContent: 'center', marginTop: 24 },
+    footerText: { color: t.textMuted, fontSize: 15 },
+    link: { color: t.accent, fontSize: 15, fontWeight: '600' },
+  })
+}
 
 export default function LoginScreen() {
+  const t = useTheme()
+  const styles = useMemo(() => makeStyles(t), [t])
   const { login } = useAuth()
   const [identifier, setIdentifier] = useState('')
   const [password, setPassword] = useState('')
@@ -132,104 +176,3 @@ export default function LoginScreen() {
     </KeyboardAvoidingView>
   )
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: t.surface },
-  inner: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: 28, paddingVertical: 40 },
-
-  logo: {
-    fontSize: 42,
-    fontWeight: '800',
-    color: t.brand,
-    textAlign: 'center',
-    marginBottom: 6,
-    letterSpacing: -1.5,
-  },
-  subtitle: {
-    fontSize: 15,
-    color: t.textMuted,
-    textAlign: 'center',
-    marginBottom: 40,
-    lineHeight: 22,
-  },
-
-  splitContainer: { flex: 1, flexDirection: 'row' },
-  leftPanel: {
-    flex: 1,
-    backgroundColor: t.brand,
-    padding: 52,
-    justifyContent: 'flex-end',
-    paddingBottom: 60,
-  },
-  panelWordmark: {
-    fontSize: 64,
-    fontWeight: '800',
-    color: '#fff',
-    letterSpacing: -2.5,
-    lineHeight: 68,
-    marginBottom: 16,
-  },
-  panelTagline: {
-    fontSize: 18,
-    color: 'rgba(255,255,255,0.4)',
-    lineHeight: 28,
-  },
-  rightPanel: {
-    flex: 1,
-    backgroundColor: t.surface,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 48,
-  },
-  formBox: { width: '100%', maxWidth: 360 },
-  formTitle: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: t.text,
-    letterSpacing: -0.5,
-    marginBottom: 28,
-  },
-
-  errorBox: { backgroundColor: t.errorBg, borderRadius: 10, padding: 12, marginBottom: 12 },
-  errorText: { color: t.errorText, fontSize: 14, textAlign: 'center' },
-  input: {
-    borderWidth: 1,
-    borderColor: t.border,
-    borderRadius: 10,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 16,
-    marginBottom: 10,
-    color: t.text,
-    backgroundColor: t.surface,
-  },
-  passwordField: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: t.border,
-    borderRadius: 10,
-    marginBottom: 10,
-    backgroundColor: t.surface,
-  },
-  passwordInput: {
-    flex: 1,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 16,
-    color: t.text,
-  },
-  peekButton: { paddingHorizontal: 14, paddingVertical: 14 },
-  button: {
-    backgroundColor: t.accent,
-    borderRadius: 10,
-    paddingVertical: 15,
-    alignItems: 'center',
-    marginTop: 6,
-  },
-  buttonDisabled: { opacity: 0.6 },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
-  footer: { flexDirection: 'row', justifyContent: 'center', marginTop: 24 },
-  footerText: { color: t.textMuted, fontSize: 15 },
-  link: { color: t.accent, fontSize: 15, fontWeight: '600' },
-})

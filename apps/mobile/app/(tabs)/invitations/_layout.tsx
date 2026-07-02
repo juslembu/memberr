@@ -1,8 +1,9 @@
 import { Stack } from 'expo-router'
-import { t } from '../../../lib/theme'
+import { useTheme } from '../../../lib/ThemeContext'
 import { HeaderTitle } from '../../../components/HeaderTitle'
 
 export default function InvitationsLayout() {
+  const t = useTheme()
   return (
     <Stack
       screenOptions={{

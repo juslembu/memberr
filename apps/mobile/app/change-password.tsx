@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import {
   View,
   Text,
@@ -10,11 +10,42 @@ import {
 } from 'react-native'
 import { useAuth } from '../hooks/useAuth'
 import { api, ApiError } from '../lib/api'
-import { t } from '../lib/theme'
+import { useTheme } from '../lib/ThemeContext'
+import type { Theme } from '../lib/theme'
 
 const webCursor = Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : {}
 
+function makeStyles(t: Theme) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: t.surface },
+    content: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: 28, paddingVertical: 48, maxWidth: 420, alignSelf: 'center', width: '100%' },
+
+    header: { alignItems: 'center', marginBottom: 32 },
+    iconWrap: { marginBottom: 16 },
+    icon: { fontSize: 48 },
+    title: { fontSize: 26, fontWeight: '800', color: t.text, letterSpacing: -0.5, textAlign: 'center', marginBottom: 8 },
+    subtitle: { fontSize: 15, color: t.textMuted, textAlign: 'center', lineHeight: 22 },
+
+    errorBox: { backgroundColor: t.errorBg, borderRadius: 10, padding: 12, marginBottom: 16 },
+    errorText: { color: t.errorText, fontSize: 14, textAlign: 'center' },
+
+    input: {
+      borderWidth: 1, borderColor: t.border, borderRadius: 10,
+      paddingHorizontal: 16, paddingVertical: 14, fontSize: 16, marginBottom: 10,
+      color: t.text, backgroundColor: t.bg,
+    },
+    button: { backgroundColor: t.accent, borderRadius: 10, paddingVertical: 15, alignItems: 'center', marginTop: 6 },
+    buttonDisabled: { opacity: 0.5 },
+    buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+
+    logoutLink: { alignItems: 'center', marginTop: 20 },
+    logoutText: { color: t.textMuted, fontSize: 14 },
+  })
+}
+
 export default function ChangePasswordScreen() {
+  const t = useTheme()
+  const styles = useMemo(() => makeStyles(t), [t])
   const { user, setUser, logout } = useAuth()
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
@@ -120,41 +151,3 @@ export default function ChangePasswordScreen() {
     </ScrollView>
   )
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: t.surface },
-  content: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: 28, paddingVertical: 48, maxWidth: 420, alignSelf: 'center', width: '100%' },
-
-  header: { alignItems: 'center', marginBottom: 32 },
-  iconWrap: { marginBottom: 16 },
-  icon: { fontSize: 48 },
-  title: { fontSize: 26, fontWeight: '800', color: t.text, letterSpacing: -0.5, textAlign: 'center', marginBottom: 8 },
-  subtitle: { fontSize: 15, color: t.textMuted, textAlign: 'center', lineHeight: 22 },
-
-  errorBox: { backgroundColor: t.errorBg, borderRadius: 10, padding: 12, marginBottom: 16 },
-  errorText: { color: t.errorText, fontSize: 14, textAlign: 'center' },
-
-  input: {
-    borderWidth: 1,
-    borderColor: t.border,
-    borderRadius: 10,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 16,
-    marginBottom: 10,
-    color: t.text,
-    backgroundColor: t.bg,
-  },
-  button: {
-    backgroundColor: t.accent,
-    borderRadius: 10,
-    paddingVertical: 15,
-    alignItems: 'center',
-    marginTop: 6,
-  },
-  buttonDisabled: { opacity: 0.5 },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
-
-  logoutLink: { alignItems: 'center', marginTop: 20 },
-  logoutText: { color: t.textMuted, fontSize: 14 },
-})

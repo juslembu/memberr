@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useMemo, useState, useCallback } from 'react'
 import {
   View,
   Text,
@@ -17,7 +17,8 @@ import { useFocusEffect } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { api, ApiError } from '../../lib/api'
 import { pickImage } from '../../lib/imagePicker'
-import { t } from '../../lib/theme'
+import { useTheme } from '../../lib/ThemeContext'
+import type { Theme } from '../../lib/theme'
 import type { PredefinedShop } from '@memberr/shared'
 
 const COLORS = [
@@ -48,7 +49,85 @@ async function compressLogoDataUrl(uri: string): Promise<string | null> {
   }
 }
 
+function makeStyles(t: Theme) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: t.bg },
+    center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+    list: { padding: 16, paddingBottom: 100 },
+    errorBanner: { backgroundColor: t.errorBg, padding: 12, margin: 16, marginBottom: 0, borderRadius: 10 },
+    errorText: { color: t.errorText, fontSize: 14, textAlign: 'center' },
+
+    row: {
+      flexDirection: 'row', alignItems: 'center', backgroundColor: t.surface,
+      borderRadius: 12, padding: 14, marginBottom: 10,
+      shadowColor: t.text, shadowOpacity: 0.05, shadowRadius: 6,
+      shadowOffset: { width: 0, height: 2 }, elevation: 2,
+    },
+    logoThumb: { width: 36, height: 36, borderRadius: 8, marginRight: 12, backgroundColor: t.bg },
+    colorDot: { width: 36, height: 36, borderRadius: 8, marginRight: 12 },
+    shopName: { flex: 1, fontSize: 16, fontWeight: '600', color: t.text },
+    iconBtn: { width: 34, height: 34, borderRadius: 8, backgroundColor: t.bg, justifyContent: 'center', alignItems: 'center', marginLeft: 6 },
+    deleteIconBtn: { backgroundColor: '#FEF2F2' },
+
+    empty: { alignItems: 'center', paddingTop: 72, gap: 10 },
+    emptyTitle: { fontSize: 18, fontWeight: '700', color: t.text, letterSpacing: -0.3 },
+    emptySub: { fontSize: 14, color: t.textMuted, textAlign: 'center', lineHeight: 20, paddingHorizontal: 32 },
+
+    fab: {
+      position: 'absolute', bottom: 24, right: 24, width: 54, height: 54, borderRadius: 27,
+      backgroundColor: t.accent, justifyContent: 'center', alignItems: 'center',
+      shadowColor: t.accent, shadowOpacity: 0.4, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 8,
+    },
+
+    overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', padding: 24 },
+    overlayScroll: { flexGrow: 1, justifyContent: 'center' },
+    dialog: {
+      backgroundColor: t.surface, borderRadius: 16, padding: 24, width: '100%', maxWidth: 400,
+      alignSelf: 'center', shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 20,
+      shadowOffset: { width: 0, height: 8 }, elevation: 12,
+    },
+    dialogTitle: { fontSize: 18, fontWeight: '700', color: t.text, marginBottom: 12, letterSpacing: -0.3 },
+    dialogBody: { fontSize: 14, color: t.textMuted, lineHeight: 20, marginBottom: 20 },
+    formErrorBox: { backgroundColor: t.errorBg, borderRadius: 8, padding: 10, marginBottom: 12 },
+    formErrorText: { color: t.errorText, fontSize: 13, textAlign: 'center' },
+    fieldLabel: { fontSize: 13, fontWeight: '600', color: t.textMuted, marginBottom: 6, marginTop: 4 },
+    input: {
+      borderWidth: 1, borderColor: t.border, borderRadius: 10,
+      paddingHorizontal: 14, paddingVertical: 12, fontSize: 16,
+      color: t.text, backgroundColor: t.bg, marginBottom: 12,
+    },
+
+    logoRow: { flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 16 },
+    logoPreviewWrap: {
+      width: 72, height: 72, borderRadius: 12, overflow: 'hidden',
+      backgroundColor: t.bg, borderWidth: 1, borderColor: t.border,
+    },
+    logoPlaceholder: { justifyContent: 'center', alignItems: 'center' },
+    logoPreview: { width: '100%', height: '100%' },
+    logoActions: { flex: 1, gap: 8 },
+    logoBtn: {
+      flexDirection: 'row', alignItems: 'center', gap: 6,
+      borderWidth: 1, borderColor: t.accent, borderRadius: 8, paddingVertical: 8, paddingHorizontal: 12,
+    },
+    logoBtnText: { fontSize: 13, fontWeight: '600', color: t.accent },
+    logoBtnRemove: { borderColor: '#FEE2E2' },
+    logoBtnRemoveText: { fontSize: 13, fontWeight: '600', color: '#DC2626' },
+
+    colorRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 20 },
+    colorSwatch: { width: 36, height: 36, borderRadius: 18 },
+    colorSelected: { borderWidth: 3, borderColor: t.text },
+    dialogActions: { flexDirection: 'row', gap: 10 },
+    cancelBtn: { flex: 1, paddingVertical: 12, borderRadius: 10, borderWidth: 1, borderColor: t.border, alignItems: 'center' },
+    cancelText: { fontSize: 15, fontWeight: '600', color: t.text },
+    confirmBtn: { flex: 1, paddingVertical: 12, borderRadius: 10, backgroundColor: t.accent, alignItems: 'center' },
+    btnDisabled: { opacity: 0.6 },
+    confirmText: { fontSize: 15, fontWeight: '600', color: '#fff' },
+  })
+}
+
 export default function AdminShopsScreen() {
+  const t = useTheme()
+  const styles = useMemo(() => makeStyles(t), [t])
   const [shops, setShops] = useState<PredefinedShop[]>([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
@@ -297,120 +376,3 @@ export default function AdminShopsScreen() {
     </View>
   )
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: t.bg },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  list: { padding: 16, paddingBottom: 100 },
-  errorBanner: { backgroundColor: t.errorBg, padding: 12, margin: 16, marginBottom: 0, borderRadius: 10 },
-  errorText: { color: t.errorText, fontSize: 14, textAlign: 'center' },
-
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: t.surface,
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 10,
-    shadowColor: t.text,
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
-  },
-  logoThumb: { width: 36, height: 36, borderRadius: 8, marginRight: 12, backgroundColor: t.bg },
-  colorDot: { width: 36, height: 36, borderRadius: 8, marginRight: 12 },
-  shopName: { flex: 1, fontSize: 16, fontWeight: '600', color: t.text },
-  iconBtn: { width: 34, height: 34, borderRadius: 8, backgroundColor: t.bg, justifyContent: 'center', alignItems: 'center', marginLeft: 6 },
-  deleteIconBtn: { backgroundColor: '#FEF2F2' },
-
-  empty: { alignItems: 'center', paddingTop: 72, gap: 10 },
-  emptyTitle: { fontSize: 18, fontWeight: '700', color: t.text, letterSpacing: -0.3 },
-  emptySub: { fontSize: 14, color: t.textMuted, textAlign: 'center', lineHeight: 20, paddingHorizontal: 32 },
-
-  fab: {
-    position: 'absolute',
-    bottom: 24,
-    right: 24,
-    width: 54,
-    height: 54,
-    borderRadius: 27,
-    backgroundColor: t.accent,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: t.accent,
-    shadowOpacity: 0.4,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 8,
-  },
-
-  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', padding: 24 },
-  overlayScroll: { flexGrow: 1, justifyContent: 'center' },
-  dialog: {
-    backgroundColor: t.surface,
-    borderRadius: 16,
-    padding: 24,
-    width: '100%',
-    maxWidth: 400,
-    alignSelf: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowRadius: 20,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 12,
-  },
-  dialogTitle: { fontSize: 18, fontWeight: '700', color: t.text, marginBottom: 12, letterSpacing: -0.3 },
-  dialogBody: { fontSize: 14, color: t.textMuted, lineHeight: 20, marginBottom: 20 },
-  formErrorBox: { backgroundColor: t.errorBg, borderRadius: 8, padding: 10, marginBottom: 12 },
-  formErrorText: { color: t.errorText, fontSize: 13, textAlign: 'center' },
-  fieldLabel: { fontSize: 13, fontWeight: '600', color: t.textMuted, marginBottom: 6, marginTop: 4 },
-  input: {
-    borderWidth: 1,
-    borderColor: t.border,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 16,
-    color: t.text,
-    backgroundColor: t.bg,
-    marginBottom: 12,
-  },
-
-  logoRow: { flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 16 },
-  logoPreviewWrap: {
-    width: 72,
-    height: 72,
-    borderRadius: 12,
-    overflow: 'hidden',
-    backgroundColor: t.bg,
-    borderWidth: 1,
-    borderColor: t.border,
-  },
-  logoPlaceholder: { justifyContent: 'center', alignItems: 'center' },
-  logoPreview: { width: '100%', height: '100%' },
-  logoActions: { flex: 1, gap: 8 },
-  logoBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    borderWidth: 1,
-    borderColor: t.accent,
-    borderRadius: 8,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-  },
-  logoBtnText: { fontSize: 13, fontWeight: '600', color: t.accent },
-  logoBtnRemove: { borderColor: '#FEE2E2' },
-  logoBtnRemoveText: { fontSize: 13, fontWeight: '600', color: '#DC2626' },
-
-  colorRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 20 },
-  colorSwatch: { width: 36, height: 36, borderRadius: 18 },
-  colorSelected: { borderWidth: 3, borderColor: t.text },
-  dialogActions: { flexDirection: 'row', gap: 10 },
-  cancelBtn: { flex: 1, paddingVertical: 12, borderRadius: 10, borderWidth: 1, borderColor: t.border, alignItems: 'center' },
-  cancelText: { fontSize: 15, fontWeight: '600', color: t.text },
-  confirmBtn: { flex: 1, paddingVertical: 12, borderRadius: 10, backgroundColor: t.accent, alignItems: 'center' },
-  btnDisabled: { opacity: 0.6 },
-  confirmText: { fontSize: 15, fontWeight: '600', color: '#fff' },
-})

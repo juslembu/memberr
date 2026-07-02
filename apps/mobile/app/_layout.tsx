@@ -1,17 +1,18 @@
-import { useEffect, useState } from 'react'
+import { useMemo, useEffect, useState } from 'react'
 import { Stack } from 'expo-router'
 import { StatusBar } from 'expo-status-bar'
 import * as SplashScreen from 'expo-splash-screen'
 import * as Notifications from 'expo-notifications'
 import { Platform, StyleSheet, View, Text, TouchableOpacity, Linking } from 'react-native'
-import { ThemeProvider, DefaultTheme } from '@react-navigation/native'
+import { ThemeProvider, DefaultTheme, DarkTheme } from '@react-navigation/native'
 import { Ionicons } from '@expo/vector-icons'
 import { AuthContext, useAuthState } from '../hooks/useAuth'
 import { usePushNotifications } from '../hooks/usePushNotifications'
 import { useServiceWorker } from '../hooks/useServiceWorker'
 import { hasServerUrl } from '../lib/serverUrl'
 import { api, APP_VERSION } from '../lib/api'
-import { t } from '../lib/theme'
+import { AppThemeProvider, useTheme, useThemePref } from '../lib/ThemeContext'
+import type { Theme } from '../lib/theme'
 
 function meetsMinVersion(appVersion: string, minVersion: string): boolean {
   const parse = (v: string) => v.split('.').map(Number)
@@ -47,12 +48,37 @@ function PushNotificationSetup() {
 // instead of a desktop page.
 const WEB_MAX_WIDTH = 480
 
-const webTheme = {
-  ...DefaultTheme,
-  colors: { ...DefaultTheme.colors, background: t.border },
+function makeStyles(t: Theme) {
+  return StyleSheet.create({
+    updateContainer: {
+      flex: 1, backgroundColor: t.bg, alignItems: 'center', justifyContent: 'center', padding: 32, gap: 16,
+    },
+    updateTitle: { fontSize: 22, fontWeight: '800', color: t.text },
+    updateBody: { fontSize: 15, color: t.textMuted, textAlign: 'center', lineHeight: 22 },
+    updateBtn: {
+      marginTop: 8, backgroundColor: t.accent, borderRadius: 12,
+      paddingHorizontal: 28, paddingVertical: 14,
+    },
+    updateBtnText: { color: '#fff', fontWeight: '700', fontSize: 15 },
+    webShell: {
+      width: '100%',
+      maxWidth: WEB_MAX_WIDTH,
+      alignSelf: 'center',
+      shadowColor: '#0F172A',
+      shadowOpacity: 0.1,
+      shadowRadius: 28,
+      shadowOffset: { width: 0, height: 0 },
+    },
+    // (auth) already implements its own wide-screen split layout, so it opts
+    // out of the centered shell and uses the full browser width.
+    webAuthShell: {
+      flex: 1,
+      width: '100%',
+    },
+  })
 }
 
-function UpdateRequiredScreen({ minVersion }: { minVersion: string }) {
+function UpdateRequiredScreen({ minVersion, styles }: { minVersion: string; styles: ReturnType<typeof makeStyles> }) {
   return (
     <View style={styles.updateContainer}>
       <Ionicons name="alert-circle" size={52} color="#E11D48" />
@@ -71,27 +97,23 @@ function UpdateRequiredScreen({ minVersion }: { minVersion: string }) {
   )
 }
 
-export default function RootLayout() {
+function RootLayoutContent() {
+  const t = useTheme()
+  const { mode } = useThemePref()
+  const styles = useMemo(() => makeStyles(t), [t])
   const auth = useAuthState()
   useServiceWorker()
 
-  // Native apps are a single distributable binary with no fixed "server" —
-  // self-hosters need to point each install at their own backend. Web
-  // always has a server (the origin it was loaded from), so this only
-  // gates native.
   const [serverConfigured, setServerConfigured] = useState<boolean | null>(null)
   useEffect(() => {
     hasServerUrl().then(setServerConfigured)
   }, [])
 
-  // Web always gets the latest bundle from the server, so version gating
-  // only matters for native APKs which can be stale.
   const [versionOk, setVersionOk] = useState<boolean | null>(Platform.OS === 'web' ? true : null)
   const [minVersion, setMinVersion] = useState('1.0.0')
   useEffect(() => {
     if (Platform.OS === 'web' || serverConfigured === null) return
     if (!serverConfigured) {
-      // No server URL yet — server-setup screen will show, skip version check
       setVersionOk(true)
       return
     }
@@ -102,7 +124,7 @@ export default function RootLayout() {
         setMinVersion(minAppVersion)
         setVersionOk(meetsMinVersion(APP_VERSION, minAppVersion))
       })
-      .catch(() => setVersionOk(true)) // fail open: unreachable server or old server without endpoint
+      .catch(() => setVersionOk(true))
       .finally(() => clearTimeout(timeout))
     return () => { controller.abort(); clearTimeout(timeout) }
   }, [serverConfigured])
@@ -113,14 +135,20 @@ export default function RootLayout() {
 
   if (auth.loading || serverConfigured === null || versionOk === null) return null
 
-  if (versionOk === false) return <UpdateRequiredScreen minVersion={minVersion} />
+  if (versionOk === false) return <UpdateRequiredScreen minVersion={minVersion} styles={styles} />
 
   const needsServerSetup = Platform.OS !== 'web' && !serverConfigured
+
+  const navTheme = mode === 'dark'
+    ? { ...DarkTheme, colors: { ...DarkTheme.colors, background: t.bg, card: t.surface, text: t.text, border: t.border, primary: t.accent } }
+    : Platform.OS === 'web'
+      ? { ...DefaultTheme, colors: { ...DefaultTheme.colors, background: t.border } }
+      : DefaultTheme
 
   return (
     <AuthContext.Provider value={auth}>
       {auth.user ? <PushNotificationSetup /> : null}
-      <ThemeProvider value={Platform.OS === 'web' ? webTheme : DefaultTheme}>
+      <ThemeProvider value={navTheme}>
         <Stack
           screenOptions={{
             headerShown: false,
@@ -144,35 +172,15 @@ export default function RootLayout() {
           )}
         </Stack>
       </ThemeProvider>
-      <StatusBar style="auto" />
+      <StatusBar style={mode === 'dark' ? 'light' : 'dark'} />
     </AuthContext.Provider>
   )
 }
 
-const styles = StyleSheet.create({
-  updateContainer: {
-    flex: 1, backgroundColor: t.bg, alignItems: 'center', justifyContent: 'center', padding: 32, gap: 16,
-  },
-  updateTitle: { fontSize: 22, fontWeight: '800', color: t.text },
-  updateBody: { fontSize: 15, color: t.textMuted, textAlign: 'center', lineHeight: 22 },
-  updateBtn: {
-    marginTop: 8, backgroundColor: t.accent, borderRadius: 12,
-    paddingHorizontal: 28, paddingVertical: 14,
-  },
-  updateBtnText: { color: '#fff', fontWeight: '700', fontSize: 15 },
-  webShell: {
-    width: '100%',
-    maxWidth: WEB_MAX_WIDTH,
-    alignSelf: 'center',
-    shadowColor: '#0F172A',
-    shadowOpacity: 0.1,
-    shadowRadius: 28,
-    shadowOffset: { width: 0, height: 0 },
-  },
-  // (auth) already implements its own wide-screen split layout, so it opts
-  // out of the centered shell and uses the full browser width.
-  webAuthShell: {
-    flex: 1,
-    width: '100%',
-  },
-})
+export default function RootLayout() {
+  return (
+    <AppThemeProvider>
+      <RootLayoutContent />
+    </AppThemeProvider>
+  )
+}

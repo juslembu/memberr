@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from 'react'
+import { useMemo, useState, useCallback, useRef, useEffect } from 'react'
 import {
   View,
   Text,
@@ -16,7 +16,8 @@ import { Ionicons } from '@expo/vector-icons'
 import { api, ApiError } from '../../../lib/api'
 import { CardThumbnail } from '../../../components/CardThumbnail'
 import { ReorderableCardList } from '../../../components/ReorderableCardList'
-import { t } from '../../../lib/theme'
+import { useTheme } from '../../../lib/ThemeContext'
+import type { Theme } from '../../../lib/theme'
 import type { Card, SharedCard } from '@memberr/shared'
 
 type ListItem =
@@ -48,6 +49,7 @@ function applyOrder(items: ListItem[], orderMap: Record<string, number>): ListIt
 }
 
 function SkeletonRow() {
+  const t = useTheme()
   const opacity = useRef(new Animated.Value(1)).current
   useEffect(() => {
     const anim = Animated.loop(
@@ -59,20 +61,92 @@ function SkeletonRow() {
     anim.start()
     return () => anim.stop()
   }, [opacity])
-  return <Animated.View style={[styles.skeleton, { opacity }]} />
+  return <Animated.View style={[{ flex: 1, height: 160, borderRadius: 14, backgroundColor: t.border, marginBottom: 10 }, { opacity }]} />
 }
 
 function SkeletonList() {
+  const t = useTheme()
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.list} scrollEnabled={false}>
-      <View style={styles.row}><SkeletonRow /><SkeletonRow /></View>
-      <View style={styles.row}><SkeletonRow /><SkeletonRow /></View>
-      <View style={styles.row}><SkeletonRow /><SkeletonRow /></View>
+    <ScrollView
+      style={{ flex: 1, backgroundColor: t.bg }}
+      contentContainerStyle={{ padding: 16, paddingBottom: 100 }}
+      scrollEnabled={false}
+    >
+      <View style={{ gap: 10, marginBottom: 0, flexDirection: 'row' }}><SkeletonRow /><SkeletonRow /></View>
+      <View style={{ gap: 10, marginBottom: 0, flexDirection: 'row' }}><SkeletonRow /><SkeletonRow /></View>
+      <View style={{ gap: 10, marginBottom: 0, flexDirection: 'row' }}><SkeletonRow /><SkeletonRow /></View>
     </ScrollView>
   )
 }
 
+function makeStyles(t: Theme) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: t.bg },
+    searchWrap: {
+      backgroundColor: t.surface, paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8,
+      borderBottomWidth: 1, borderBottomColor: t.border, gap: 10,
+    },
+    searchRow: {
+      flexDirection: 'row', alignItems: 'center', backgroundColor: t.bg,
+      borderRadius: 12, borderWidth: 1, borderColor: t.border, paddingHorizontal: 12, paddingVertical: 9,
+    },
+    searchInput: {
+      flex: 1, fontSize: 14, color: t.text,
+      ...(Platform.OS === 'web' ? { outlineStyle: 'none' } as any : {}),
+    },
+    filterRow: { flexDirection: 'row', gap: 8 },
+    filterChip: {
+      borderRadius: 20, paddingVertical: 5, paddingHorizontal: 12,
+      backgroundColor: t.bg, borderWidth: 1, borderColor: t.border,
+      ...(Platform.OS === 'web' ? { cursor: 'pointer' } as any : {}),
+    },
+    filterChipActive: { backgroundColor: t.accentBg, borderColor: t.accent },
+    filterChipText: { fontSize: 13, fontWeight: '600', color: t.textMuted },
+    filterChipTextActive: { color: t.accent },
+    reorderChip: {
+      flexDirection: 'row', alignItems: 'center', gap: 4, borderRadius: 20,
+      paddingVertical: 5, paddingHorizontal: 12, backgroundColor: t.bg,
+      borderWidth: 1, borderColor: t.border, marginLeft: 'auto',
+      ...(Platform.OS === 'web' ? { cursor: 'pointer' } as any : {}),
+    },
+    reorderChipActive: { backgroundColor: t.accent, borderColor: t.accent },
+    reorderChipText: { fontSize: 13, fontWeight: '600', color: t.textMuted },
+    reorderChipTextActive: { color: '#fff' },
+    list: { padding: 16, paddingBottom: 100 },
+    row: { gap: 10, marginBottom: 0 },
+    empty: { alignItems: 'center', paddingTop: 72, paddingHorizontal: 32, gap: 10 },
+    emptyIconWrap: {
+      width: 72, height: 72, borderRadius: 36,
+      backgroundColor: t.surface, borderWidth: 1, borderColor: t.border,
+      justifyContent: 'center', alignItems: 'center', marginBottom: 4,
+    },
+    emptyTitle: { fontSize: 18, fontWeight: '700', color: t.text, letterSpacing: -0.3 },
+    emptySub: { fontSize: 14, color: t.textMuted, textAlign: 'center', lineHeight: 20 },
+    emptyBtn: {
+      flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8,
+      borderWidth: 1, borderColor: t.accent, borderRadius: 20,
+      paddingVertical: 10, paddingHorizontal: 20,
+      ...(Platform.OS === 'web' ? { cursor: 'pointer' } as any : {}),
+    },
+    emptyBtnText: { color: t.accent, fontSize: 14, fontWeight: '600' },
+    errorBanner: {
+      position: 'absolute', bottom: 100, left: 16, right: 16,
+      backgroundColor: t.errorBg, borderRadius: 10, padding: 12,
+    },
+    errorText: { color: t.errorText, fontSize: 14, textAlign: 'center' },
+    fab: {
+      position: 'absolute', bottom: 24, right: 24, width: 54, height: 54, borderRadius: 27,
+      backgroundColor: t.accent, justifyContent: 'center', alignItems: 'center',
+      shadowColor: t.accent, shadowOpacity: 0.4, shadowRadius: 12, shadowOffset: { width: 0, height: 4 },
+      elevation: 8,
+      ...(Platform.OS === 'web' ? { cursor: 'pointer' } as any : {}),
+    },
+  })
+}
+
 export default function MyCardsScreen() {
+  const t = useTheme()
+  const styles = useMemo(() => makeStyles(t), [t])
   const router = useRouter()
   const [items, setItems] = useState<ListItem[]>([])
   const [loading, setLoading] = useState(true)
@@ -257,92 +331,3 @@ export default function MyCardsScreen() {
     </View>
   )
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: t.bg },
-  searchWrap: {
-    backgroundColor: t.surface,
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: t.border,
-    gap: 10,
-  },
-  searchRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: t.bg,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: t.border,
-    paddingHorizontal: 12,
-    paddingVertical: 9,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 14,
-    color: t.text,
-    ...(Platform.OS === 'web' ? { outlineStyle: 'none' } as any : {}),
-  },
-  filterRow: { flexDirection: 'row', gap: 8 },
-  filterChip: {
-    borderRadius: 20,
-    paddingVertical: 5,
-    paddingHorizontal: 12,
-    backgroundColor: t.bg,
-    borderWidth: 1,
-    borderColor: t.border,
-    ...(Platform.OS === 'web' ? { cursor: 'pointer' } as any : {}),
-  },
-  filterChipActive: { backgroundColor: t.accentBg, borderColor: t.accent },
-  filterChipText: { fontSize: 13, fontWeight: '600', color: t.textMuted },
-  filterChipTextActive: { color: t.accent },
-  reorderChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    borderRadius: 20,
-    paddingVertical: 5,
-    paddingHorizontal: 12,
-    backgroundColor: t.bg,
-    borderWidth: 1,
-    borderColor: t.border,
-    marginLeft: 'auto',
-    ...(Platform.OS === 'web' ? { cursor: 'pointer' } as any : {}),
-  },
-  reorderChipActive: { backgroundColor: t.accent, borderColor: t.accent },
-  reorderChipText: { fontSize: 13, fontWeight: '600', color: t.textMuted },
-  reorderChipTextActive: { color: '#fff' },
-  list: { padding: 16, paddingBottom: 100 },
-  row: { gap: 10, marginBottom: 0 },
-  skeleton: { flex: 1, height: 160, borderRadius: 14, backgroundColor: t.border, marginBottom: 10 },
-  empty: { alignItems: 'center', paddingTop: 72, paddingHorizontal: 32, gap: 10 },
-  emptyIconWrap: {
-    width: 72, height: 72, borderRadius: 36,
-    backgroundColor: t.surface, borderWidth: 1, borderColor: t.border,
-    justifyContent: 'center', alignItems: 'center', marginBottom: 4,
-  },
-  emptyTitle: { fontSize: 18, fontWeight: '700', color: t.text, letterSpacing: -0.3 },
-  emptySub: { fontSize: 14, color: t.textMuted, textAlign: 'center', lineHeight: 20 },
-  emptyBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8,
-    borderWidth: 1, borderColor: t.accent, borderRadius: 20,
-    paddingVertical: 10, paddingHorizontal: 20,
-    ...(Platform.OS === 'web' ? { cursor: 'pointer' } as any : {}),
-  },
-  emptyBtnText: { color: t.accent, fontSize: 14, fontWeight: '600' },
-  errorBanner: {
-    position: 'absolute', bottom: 100, left: 16, right: 16,
-    backgroundColor: t.errorBg, borderRadius: 10, padding: 12,
-  },
-  errorText: { color: t.errorText, fontSize: 14, textAlign: 'center' },
-  fab: {
-    position: 'absolute', bottom: 24, right: 24,
-    width: 54, height: 54, borderRadius: 27,
-    backgroundColor: t.accent, justifyContent: 'center', alignItems: 'center',
-    shadowColor: t.accent, shadowOpacity: 0.4, shadowRadius: 12, shadowOffset: { width: 0, height: 4 },
-    elevation: 8,
-    ...(Platform.OS === 'web' ? { cursor: 'pointer' } as any : {}),
-  },
-})

@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useMemo, useState, useCallback } from 'react'
 import {
   View,
   Text,
@@ -14,10 +14,50 @@ import { Ionicons } from '@expo/vector-icons'
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake'
 import { api } from '../../../lib/api'
 import { BarcodeDisplay } from '../../../components/BarcodeDisplay'
-import { t } from '../../../lib/theme'
+import { useTheme } from '../../../lib/ThemeContext'
+import type { Theme } from '../../../lib/theme'
 import type { SharedCard, BarcodeType } from '@memberr/shared'
 
+function makeStyles(t: Theme) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: t.bg },
+    center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
+    errorText: { color: t.errorText, fontSize: 15, textAlign: 'center' },
+    cardHero: { padding: 24, paddingTop: 32, paddingBottom: 16 },
+    heroTop: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
+    pinBtn: { padding: 6, marginRight: 4 },
+    heroLogoWrap: { flexShrink: 0 },
+    heroLogo: { width: 52, height: 52, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.15)' },
+    heroStore: { fontSize: 26, fontWeight: '800', color: '#fff', letterSpacing: -0.5 },
+    sharedBy: { fontSize: 13, color: 'rgba(255,255,255,0.70)', marginTop: 4 },
+    heroNumber: { fontSize: 17, color: 'rgba(255,255,255,0.85)', letterSpacing: 2, marginTop: 14 },
+    expiryRow: {
+      flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 10,
+      backgroundColor: 'rgba(0,0,0,0.15)', alignSelf: 'flex-start',
+      borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4,
+    },
+    expiryRowWarn: { backgroundColor: 'rgba(249,115,22,0.7)' },
+    expiryRowExpired: { backgroundColor: 'rgba(239,68,68,0.7)' },
+    expiryLabel: { fontSize: 12, color: '#fff', fontWeight: '600' },
+    barcodeSection: { backgroundColor: t.surface, padding: 24, alignItems: 'center', gap: 8 },
+    barcodeLabel: { fontSize: 11, color: t.textSubtle, textTransform: 'uppercase', letterSpacing: 1 },
+    section: { backgroundColor: t.surface, padding: 20, marginTop: 1 },
+    sectionTitle: { fontSize: 13, fontWeight: '600', color: t.textMuted, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 8 },
+    notes: { fontSize: 15, color: t.text, lineHeight: 22 },
+    expiry: { fontSize: 14, color: '#D97706', fontWeight: '600' },
+    cardImage: { width: '100%', height: 200, borderRadius: 10, backgroundColor: t.border },
+    fullImageOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.92)', justifyContent: 'center', alignItems: 'center' },
+    fullImage: { width: '100%', height: '80%' },
+    fullImageClose: {
+      position: 'absolute', top: 48, right: 20, width: 40, height: 40, borderRadius: 20,
+      backgroundColor: 'rgba(255,255,255,0.15)', justifyContent: 'center', alignItems: 'center',
+    },
+  })
+}
+
 export default function SharedCardDetailScreen() {
+  const t = useTheme()
+  const styles = useMemo(() => makeStyles(t), [t])
   const { shareId } = useLocalSearchParams<{ shareId: string }>()
   const [data, setData] = useState<SharedCard | null>(null)
   const [isPinned, setIsPinned] = useState(false)
@@ -141,50 +181,3 @@ export default function SharedCardDetailScreen() {
     </ScrollView>
   )
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: t.bg },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
-  errorText: { color: t.errorText, fontSize: 15, textAlign: 'center' },
-  cardHero: { padding: 24, paddingTop: 32, paddingBottom: 16 },
-  heroTop: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
-  pinBtn: { padding: 6, marginRight: 4 },
-  heroLogoWrap: { flexShrink: 0 },
-  heroLogo: { width: 52, height: 52, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.15)' },
-  heroStore: { fontSize: 26, fontWeight: '800', color: '#fff', letterSpacing: -0.5 },
-  sharedBy: { fontSize: 13, color: 'rgba(255,255,255,0.70)', marginTop: 4 },
-  heroNumber: { fontSize: 17, color: 'rgba(255,255,255,0.85)', letterSpacing: 2, marginTop: 14 },
-  expiryRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 10,
-    backgroundColor: 'rgba(0,0,0,0.15)', alignSelf: 'flex-start',
-    borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4,
-  },
-  expiryRowWarn: { backgroundColor: 'rgba(249,115,22,0.7)' },
-  expiryRowExpired: { backgroundColor: 'rgba(239,68,68,0.7)' },
-  expiryLabel: { fontSize: 12, color: '#fff', fontWeight: '600' },
-  barcodeSection: { backgroundColor: t.surface, padding: 24, alignItems: 'center', gap: 8 },
-  barcodeLabel: { fontSize: 11, color: t.textSubtle, textTransform: 'uppercase', letterSpacing: 1 },
-  section: { backgroundColor: t.surface, padding: 20, marginTop: 1 },
-  sectionTitle: { fontSize: 13, fontWeight: '600', color: t.textMuted, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 8 },
-  notes: { fontSize: 15, color: t.text, lineHeight: 22 },
-  expiry: { fontSize: 14, color: '#D97706', fontWeight: '600' },
-  cardImage: { width: '100%', height: 200, borderRadius: 10, backgroundColor: t.border },
-  fullImageOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.92)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  fullImage: { width: '100%', height: '80%' },
-  fullImageClose: {
-    position: 'absolute',
-    top: 48,
-    right: 20,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-})

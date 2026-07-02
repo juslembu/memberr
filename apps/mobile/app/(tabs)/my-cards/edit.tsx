@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useMemo, useState, useCallback } from 'react'
 import {
   View,
   Text,
@@ -17,6 +17,8 @@ import { api, ApiError } from '../../../lib/api'
 import { BARCODE_TYPES, BARCODE_LABELS } from '@memberr/shared'
 import type { BarcodeType, Card, PredefinedShop } from '@memberr/shared'
 import { BarcodeDisplay } from '../../../components/BarcodeDisplay'
+import { useTheme } from '../../../lib/ThemeContext'
+import type { Theme } from '../../../lib/theme'
 
 const CARD_COLORS = [
   '#0EA5E9', '#8b5cf6', '#ec4899', '#f43f5e',
@@ -24,9 +26,79 @@ const CARD_COLORS = [
   '#3b82f6', '#64748b',
 ]
 
+function makeStyles(t: Theme) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: t.bg },
+    center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+    barcodePreview: { backgroundColor: t.surface, padding: 24, alignItems: 'center', gap: 8 },
+    detectedLabel: { fontSize: 12, color: t.textSubtle, textAlign: 'center' },
+    form: { padding: 24 },
+    errorBox: { backgroundColor: t.errorBg, borderRadius: 10, padding: 12, marginBottom: 12 },
+    errorText: { color: t.errorText, fontSize: 14 },
+    label: { fontSize: 14, fontWeight: '600', color: t.textMuted, marginBottom: 6, marginTop: 16 },
+    input: {
+      borderWidth: 1, borderColor: t.border, borderRadius: 10,
+      paddingHorizontal: 14, paddingVertical: 12, fontSize: 16, color: t.text, backgroundColor: t.surface,
+    },
+    shopInputWrap: { position: 'relative' },
+    shopInputSelected: { paddingRight: 40 },
+    shopClearBtn: { position: 'absolute', right: 12, top: 0, bottom: 0, justifyContent: 'center' },
+    shopSelectedBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6, paddingHorizontal: 2 },
+    selectedLogo: { width: 16, height: 16, borderRadius: 3 },
+    shopSelectedText: { fontSize: 12, color: t.accent, fontWeight: '600' },
+    suggestions: {
+      backgroundColor: t.surface, borderWidth: 1, borderColor: t.border,
+      borderRadius: 10, marginTop: 4, overflow: 'hidden',
+      shadowColor: t.text, shadowOpacity: 0.08, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 4,
+    },
+    suggestionItem: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 14, paddingVertical: 12 },
+    suggestionItemBorder: { borderBottomWidth: 1, borderBottomColor: t.border },
+    suggestionLogo: { width: 28, height: 28, borderRadius: 6, backgroundColor: t.bg },
+    suggestionDot: { width: 28, height: 28, borderRadius: 14 },
+    suggestionText: { flex: 1, fontSize: 15, fontWeight: '600', color: t.text },
+    textarea: { minHeight: 80, textAlignVertical: 'top' },
+    picker: {
+      borderWidth: 1, borderColor: t.border, borderRadius: 10,
+      paddingHorizontal: 14, paddingVertical: 12, backgroundColor: t.surface,
+      flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    },
+    pickerText: { fontSize: 16, color: t.text },
+    pickerChevron: { fontSize: 16, color: t.textMuted },
+    colorRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 4 },
+    colorSwatch: { width: 36, height: 36, borderRadius: 18 },
+    colorSelected: { borderWidth: 3, borderColor: t.text },
+    actions: { flexDirection: 'row', gap: 12, marginTop: 32, marginBottom: 40 },
+    backBtn: {
+      flex: 1, borderWidth: 1.5, borderColor: t.border, borderRadius: 12,
+      paddingVertical: 15, alignItems: 'center',
+    },
+    backBtnText: { fontSize: 16, fontWeight: '600', color: t.text },
+    saveBtn: { flex: 2, backgroundColor: t.accent, borderRadius: 12, paddingVertical: 15, alignItems: 'center' },
+    btnDisabled: { opacity: 0.5 },
+    saveBtnText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+    modalOverlay: {
+      position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+      backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end',
+    },
+    modalContent: {
+      backgroundColor: t.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20,
+      maxHeight: 480, padding: 20,
+    },
+    modalTitle: { fontSize: 18, fontWeight: '700', color: t.text, marginBottom: 16 },
+    modalItem: { paddingVertical: 14, paddingHorizontal: 8, borderRadius: 8 },
+    modalItemSelected: { backgroundColor: t.accentBg },
+    modalItemText: { fontSize: 16, color: t.textMuted },
+    modalItemTextSelected: { color: t.accent, fontWeight: '600' },
+    modalCancel: { paddingVertical: 16, alignItems: 'center', marginTop: 8 },
+    modalCancelText: { fontSize: 16, color: t.textMuted },
+  })
+}
+
 export default function EditCardScreen() {
   const { id } = useLocalSearchParams<{ id: string }>()
   const router = useRouter()
+  const t = useTheme()
+  const styles = useMemo(() => makeStyles(t), [t])
   const [card, setCard] = useState<Card | null>(null)
   const [storeName, setStoreName] = useState('')
   const [cardNumber, setCardNumber] = useState('')
@@ -93,7 +165,7 @@ export default function EditCardScreen() {
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#0EA5E9" />
+        <ActivityIndicator size="large" color={t.accent} />
       </View>
     )
   }
@@ -119,14 +191,14 @@ export default function EditCardScreen() {
             onFocus={() => setShopInputFocused(true)}
             onBlur={() => setTimeout(() => setShopInputFocused(false), 100)}
             placeholder="Search or type shop name…"
-            placeholderTextColor="#9ca3af"
+            placeholderTextColor={t.textSubtle}
           />
           {selectedShopId ? (
             <TouchableOpacity
               style={styles.shopClearBtn}
               onPress={() => setSelectedShopId(null)}
             >
-              <Ionicons name="close-circle" size={20} color="#9ca3af" />
+              <Ionicons name="close-circle" size={20} color={t.textSubtle} />
             </TouchableOpacity>
           ) : null}
         </View>
@@ -164,7 +236,7 @@ export default function EditCardScreen() {
                       <View style={[styles.suggestionDot, { backgroundColor: shop.color }]} />
                     )}
                     <Text style={styles.suggestionText} numberOfLines={1}>{shop.name}</Text>
-                    <Ionicons name="chevron-forward" size={14} color="#d1d5db" />
+                    <Ionicons name="chevron-forward" size={14} color={t.textSubtle} />
                   </TouchableOpacity>
                 ))}
               </ScrollView>
@@ -178,7 +250,7 @@ export default function EditCardScreen() {
           value={cardNumber}
           onChangeText={setCardNumber}
           placeholder="Card number or code"
-          placeholderTextColor="#9ca3af"
+          placeholderTextColor={t.textSubtle}
           autoCapitalize="characters"
         />
 
@@ -205,7 +277,7 @@ export default function EditCardScreen() {
           value={notes}
           onChangeText={setNotes}
           placeholder="e.g. Rewards tier, member since, notes"
-          placeholderTextColor="#9ca3af"
+          placeholderTextColor={t.textSubtle}
           multiline
           numberOfLines={3}
         />
@@ -216,7 +288,7 @@ export default function EditCardScreen() {
           value={expiresAt}
           onChangeText={setExpiresAt}
           placeholder="YYYY-MM-DD"
-          placeholderTextColor="#9ca3af"
+          placeholderTextColor={t.textSubtle}
           autoCapitalize="none"
           autoCorrect={false}
         />
@@ -240,14 +312,14 @@ export default function EditCardScreen() {
           <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
             <Text style={styles.modalTitle}>Select barcode type</Text>
             <ScrollView>
-              {BARCODE_TYPES.map((t) => (
+              {BARCODE_TYPES.map((tp) => (
                 <Pressable
-                  key={t}
-                  style={[styles.modalItem, barcodeType === t && styles.modalItemSelected]}
-                  onPress={() => { setBarcodeType(t); setShowTypePicker(false) }}
+                  key={tp}
+                  style={[styles.modalItem, barcodeType === tp && styles.modalItemSelected]}
+                  onPress={() => { setBarcodeType(tp); setShowTypePicker(false) }}
                 >
-                  <Text style={[styles.modalItemText, barcodeType === t && styles.modalItemTextSelected]}>
-                    {BARCODE_LABELS[t]}
+                  <Text style={[styles.modalItemText, barcodeType === tp && styles.modalItemTextSelected]}>
+                    {BARCODE_LABELS[tp]}
                   </Text>
                 </Pressable>
               ))}
@@ -261,77 +333,3 @@ export default function EditCardScreen() {
     </ScrollView>
   )
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f9fafb' },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  barcodePreview: { backgroundColor: '#fff', padding: 24, alignItems: 'center', gap: 8 },
-  detectedLabel: { fontSize: 12, color: '#9ca3af', textAlign: 'center' },
-  form: { padding: 24 },
-  errorBox: { backgroundColor: '#fef2f2', borderRadius: 10, padding: 12, marginBottom: 12 },
-  errorText: { color: '#dc2626', fontSize: 14 },
-  label: { fontSize: 14, fontWeight: '600', color: '#374151', marginBottom: 6, marginTop: 16 },
-  input: {
-    borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 10,
-    paddingHorizontal: 14, paddingVertical: 12, fontSize: 16, color: '#111827', backgroundColor: '#fff',
-  },
-  shopInputWrap: { position: 'relative' },
-  shopInputSelected: { paddingRight: 40 },
-  shopClearBtn: { position: 'absolute', right: 12, top: 0, bottom: 0, justifyContent: 'center' },
-  shopSelectedBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6, paddingHorizontal: 2 },
-  selectedLogo: { width: 16, height: 16, borderRadius: 3 },
-  shopSelectedText: { fontSize: 12, color: '#0EA5E9', fontWeight: '600' },
-  suggestions: {
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    borderRadius: 10,
-    marginTop: 4,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 4,
-  },
-  suggestionItem: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 14, paddingVertical: 12 },
-  suggestionItemBorder: { borderBottomWidth: 1, borderBottomColor: '#f3f4f6' },
-  suggestionLogo: { width: 28, height: 28, borderRadius: 6, backgroundColor: '#f3f4f6' },
-  suggestionDot: { width: 28, height: 28, borderRadius: 14 },
-  suggestionText: { flex: 1, fontSize: 15, fontWeight: '600', color: '#111827' },
-  textarea: { minHeight: 80, textAlignVertical: 'top' },
-  picker: {
-    borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 10,
-    paddingHorizontal: 14, paddingVertical: 12, backgroundColor: '#fff',
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-  },
-  pickerText: { fontSize: 16, color: '#111827' },
-  pickerChevron: { fontSize: 16, color: '#6b7280' },
-  colorRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 4 },
-  colorSwatch: { width: 36, height: 36, borderRadius: 18 },
-  colorSelected: { borderWidth: 3, borderColor: '#111827' },
-  actions: { flexDirection: 'row', gap: 12, marginTop: 32, marginBottom: 40 },
-  backBtn: {
-    flex: 1, borderWidth: 1.5, borderColor: '#e5e7eb', borderRadius: 12,
-    paddingVertical: 15, alignItems: 'center',
-  },
-  backBtnText: { fontSize: 16, fontWeight: '600', color: '#374151' },
-  saveBtn: { flex: 2, backgroundColor: '#0EA5E9', borderRadius: 12, paddingVertical: 15, alignItems: 'center' },
-  btnDisabled: { opacity: 0.5 },
-  saveBtnText: { color: '#fff', fontSize: 16, fontWeight: '600' },
-  modalOverlay: {
-    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end',
-  },
-  modalContent: {
-    backgroundColor: '#fff', borderTopLeftRadius: 20, borderTopRightRadius: 20,
-    maxHeight: 480, padding: 20,
-  },
-  modalTitle: { fontSize: 18, fontWeight: '700', color: '#111827', marginBottom: 16 },
-  modalItem: { paddingVertical: 14, paddingHorizontal: 8, borderRadius: 8 },
-  modalItemSelected: { backgroundColor: '#E0F2FE' },
-  modalItemText: { fontSize: 16, color: '#374151' },
-  modalItemTextSelected: { color: '#0EA5E9', fontWeight: '600' },
-  modalCancel: { paddingVertical: 16, alignItems: 'center', marginTop: 8 },
-  modalCancelText: { fontSize: 16, color: '#6b7280' },
-})

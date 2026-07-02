@@ -1,7 +1,9 @@
-import { useEffect, useRef, useState } from 'react'
+import { useMemo, useEffect, useRef, useState } from 'react'
 import { View, Text, Pressable, StyleSheet } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import type { BarcodeType } from '@memberr/shared'
+import { useTheme } from '../lib/ThemeContext'
+import type { Theme } from '../lib/theme'
 
 interface Props {
   onScanned: (type: BarcodeType, value: string) => void
@@ -16,7 +18,48 @@ const ZXING_FORMAT_MAP: Partial<Record<string, BarcodeType>> = {
 
 type Status = 'starting' | 'scanning' | 'denied' | 'unsupported'
 
+const CORNER = 24
+const BORDER = 3
+
+function makeStyles(t: Theme) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: '#000', position: 'relative' } as any,
+    overlay: {
+      position: 'absolute' as any, top: 0, left: 0, right: 0, bottom: 0,
+      justifyContent: 'space-between', paddingBottom: 60,
+    },
+    topBar: {
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+      paddingHorizontal: 16, paddingTop: 24, paddingBottom: 16,
+      backgroundColor: 'rgba(0,0,0,0.45)',
+    },
+    closeBtn: { width: 44, height: 44, justifyContent: 'center', alignItems: 'center' },
+    topBarTitle: { color: '#fff', fontSize: 17, fontWeight: '600' },
+    scanArea: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+    scanFrame: { width: 260, height: 160, position: 'relative' },
+    corner: { position: 'absolute', width: CORNER, height: CORNER, borderColor: t.accent },
+    cornerTL: { top: 0, left: 0, borderTopWidth: BORDER, borderLeftWidth: BORDER },
+    cornerTR: { top: 0, right: 0, borderTopWidth: BORDER, borderRightWidth: BORDER },
+    cornerBL: { bottom: 0, left: 0, borderBottomWidth: BORDER, borderLeftWidth: BORDER },
+    cornerBR: { bottom: 0, right: 0, borderBottomWidth: BORDER, borderRightWidth: BORDER },
+    hint: { color: 'rgba(255,255,255,0.8)', textAlign: 'center', fontSize: 14, paddingHorizontal: 40 },
+    msgBox: {
+      flex: 1, justifyContent: 'center', alignItems: 'center',
+      padding: 32, gap: 12, backgroundColor: t.bg,
+    },
+    msgTitle: { fontSize: 20, fontWeight: '700', color: t.text, textAlign: 'center' },
+    msgSub: { fontSize: 15, color: t.textMuted, textAlign: 'center', lineHeight: 22 },
+    btn: {
+      backgroundColor: t.accent, borderRadius: 12,
+      paddingVertical: 14, paddingHorizontal: 32, marginTop: 8,
+    },
+    btnText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  })
+}
+
 export function BarcodeScanner({ onScanned, onCancel }: Props) {
+  const t = useTheme()
+  const styles = useMemo(() => makeStyles(t), [t])
   const videoRef = useRef<HTMLVideoElement>(null)
   const readerRef = useRef<any>(null)
   const doneRef = useRef(false)
@@ -36,7 +79,7 @@ export function BarcodeScanner({ onScanned, onCancel }: Props) {
         const stream = await navigator.mediaDevices.getUserMedia({
           video: { facingMode: { ideal: 'environment' } },
         })
-        if (cancelled) { stream.getTracks().forEach(t => t.stop()); return }
+        if (cancelled) { stream.getTracks().forEach(tr => tr.stop()); return }
 
         if (videoRef.current) {
           videoRef.current.srcObject = stream
@@ -44,7 +87,7 @@ export function BarcodeScanner({ onScanned, onCancel }: Props) {
         }
         setStatus('scanning')
 
-        reader.decodeFromStream(stream, videoRef.current!, (result, err) => {
+        reader.decodeFromStream(stream, videoRef.current!, (result, _err) => {
           if (!result || doneRef.current) return
           doneRef.current = true
           const fmt = BarcodeFormat[result.getBarcodeFormat()]
@@ -65,7 +108,7 @@ export function BarcodeScanner({ onScanned, onCancel }: Props) {
       try { readerRef.current?.reset() } catch {}
       if (videoRef.current?.srcObject) {
         const stream = videoRef.current.srcObject as MediaStream
-        stream.getTracks().forEach(t => t.stop())
+        stream.getTracks().forEach(tr => tr.stop())
       }
     }
   }, [])
@@ -73,7 +116,7 @@ export function BarcodeScanner({ onScanned, onCancel }: Props) {
   if (status === 'denied') {
     return (
       <View style={styles.msgBox}>
-        <Ionicons name="camera-off-outline" size={48} color="#6366f1" />
+        <Ionicons name="camera-outline" size={48} color={t.accent} />
         <Text style={styles.msgTitle}>Camera access denied</Text>
         <Text style={styles.msgSub}>Allow camera access in your browser settings, then try again.</Text>
         <Pressable style={styles.btn} onPress={onCancel}>
@@ -133,40 +176,3 @@ export function BarcodeScanner({ onScanned, onCancel }: Props) {
     </View>
   )
 }
-
-const CORNER = 24
-const BORDER = 3
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#000', position: 'relative' } as any,
-  overlay: {
-    position: 'absolute' as any, top: 0, left: 0, right: 0, bottom: 0,
-    justifyContent: 'space-between', paddingBottom: 60,
-  },
-  topBar: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 16, paddingTop: 24, paddingBottom: 16,
-    backgroundColor: 'rgba(0,0,0,0.45)',
-  },
-  closeBtn: { width: 44, height: 44, justifyContent: 'center', alignItems: 'center' },
-  topBarTitle: { color: '#fff', fontSize: 17, fontWeight: '600' },
-  scanArea: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  scanFrame: { width: 260, height: 160, position: 'relative' },
-  corner: { position: 'absolute', width: CORNER, height: CORNER, borderColor: '#6366f1' },
-  cornerTL: { top: 0, left: 0, borderTopWidth: BORDER, borderLeftWidth: BORDER },
-  cornerTR: { top: 0, right: 0, borderTopWidth: BORDER, borderRightWidth: BORDER },
-  cornerBL: { bottom: 0, left: 0, borderBottomWidth: BORDER, borderLeftWidth: BORDER },
-  cornerBR: { bottom: 0, right: 0, borderBottomWidth: BORDER, borderRightWidth: BORDER },
-  hint: { color: 'rgba(255,255,255,0.8)', textAlign: 'center', fontSize: 14, paddingHorizontal: 40 },
-  msgBox: {
-    flex: 1, justifyContent: 'center', alignItems: 'center',
-    padding: 32, gap: 12, backgroundColor: '#f9fafb',
-  },
-  msgTitle: { fontSize: 20, fontWeight: '700', color: '#111827', textAlign: 'center' },
-  msgSub: { fontSize: 15, color: '#6b7280', textAlign: 'center', lineHeight: 22 },
-  btn: {
-    backgroundColor: '#6366f1', borderRadius: 12,
-    paddingVertical: 14, paddingHorizontal: 32, marginTop: 8,
-  },
-  btnText: { color: '#fff', fontSize: 16, fontWeight: '600' },
-})

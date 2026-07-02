@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import {
   View,
   Text,
@@ -12,9 +12,35 @@ import {
 import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { getBundledDefaultServerUrl, setServerUrl, pingServer, normalizeServerUrl } from '../lib/serverUrl'
-import { t } from '../lib/theme'
+import { useTheme } from '../lib/ThemeContext'
+import type { Theme } from '../lib/theme'
+
+function makeStyles(t: Theme) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: t.surface },
+    content: { flex: 1, justifyContent: 'center', paddingHorizontal: 28 },
+    iconWrap: {
+      width: 56, height: 56, borderRadius: 16, backgroundColor: t.accentBg,
+      justifyContent: 'center', alignItems: 'center', alignSelf: 'center', marginBottom: 20,
+    },
+    title: { fontSize: 24, fontWeight: '800', color: t.text, textAlign: 'center', marginBottom: 10, letterSpacing: -0.5 },
+    subtitle: { fontSize: 14, color: t.textMuted, textAlign: 'center', lineHeight: 20, marginBottom: 28 },
+    input: {
+      borderWidth: 1, borderColor: t.border, borderRadius: 10,
+      paddingHorizontal: 16, paddingVertical: 14, fontSize: 16, color: t.text, backgroundColor: t.surface,
+    },
+    errorBox: { backgroundColor: t.errorBg, borderRadius: 10, padding: 12, marginTop: 12, gap: 6 },
+    errorText: { color: t.errorText, fontSize: 13, textAlign: 'center' },
+    errorLink: { color: t.errorText, fontSize: 13, fontWeight: '700', textAlign: 'center', textDecorationLine: 'underline' },
+    button: { backgroundColor: t.accent, borderRadius: 10, paddingVertical: 15, alignItems: 'center', marginTop: 16 },
+    buttonDisabled: { opacity: 0.6 },
+    buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  })
+}
 
 export default function ServerSetupScreen() {
+  const t = useTheme()
+  const styles = useMemo(() => makeStyles(t), [t])
   const router = useRouter()
   const [url, setUrl] = useState('')
   const [checking, setChecking] = useState(false)
@@ -91,24 +117,3 @@ export default function ServerSetupScreen() {
     </KeyboardAvoidingView>
   )
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: t.surface },
-  content: { flex: 1, justifyContent: 'center', paddingHorizontal: 28 },
-  iconWrap: {
-    width: 56, height: 56, borderRadius: 16, backgroundColor: t.accentBg,
-    justifyContent: 'center', alignItems: 'center', alignSelf: 'center', marginBottom: 20,
-  },
-  title: { fontSize: 24, fontWeight: '800', color: t.text, textAlign: 'center', marginBottom: 10, letterSpacing: -0.5 },
-  subtitle: { fontSize: 14, color: t.textMuted, textAlign: 'center', lineHeight: 20, marginBottom: 28 },
-  input: {
-    borderWidth: 1, borderColor: t.border, borderRadius: 10,
-    paddingHorizontal: 16, paddingVertical: 14, fontSize: 16, color: t.text, backgroundColor: t.surface,
-  },
-  errorBox: { backgroundColor: t.errorBg, borderRadius: 10, padding: 12, marginTop: 12, gap: 6 },
-  errorText: { color: t.errorText, fontSize: 13, textAlign: 'center' },
-  errorLink: { color: t.errorText, fontSize: 13, fontWeight: '700', textAlign: 'center', textDecorationLine: 'underline' },
-  button: { backgroundColor: t.accent, borderRadius: 10, paddingVertical: 15, alignItems: 'center', marginTop: 16 },
-  buttonDisabled: { opacity: 0.6 },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
-})

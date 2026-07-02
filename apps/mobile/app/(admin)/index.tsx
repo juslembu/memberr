@@ -1,7 +1,9 @@
+import { useMemo } from 'react'
 import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native'
 import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
-import { t } from '../../lib/theme'
+import { useTheme } from '../../lib/ThemeContext'
+import type { Theme } from '../../lib/theme'
 
 const webCursor = Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : {}
 
@@ -20,7 +22,26 @@ const ITEMS = [
   },
 ]
 
+function makeStyles(t: Theme) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: t.bg, padding: 16, paddingTop: 24 },
+    row: {
+      flexDirection: 'row', alignItems: 'center', backgroundColor: t.surface,
+      borderRadius: 14, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: t.border, gap: 14,
+    },
+    iconWrap: {
+      width: 44, height: 44, borderRadius: 12, backgroundColor: t.accentBg,
+      justifyContent: 'center', alignItems: 'center',
+    },
+    text: { flex: 1 },
+    label: { fontSize: 16, fontWeight: '700', color: t.text, marginBottom: 2 },
+    desc: { fontSize: 13, color: t.textMuted, lineHeight: 18 },
+  })
+}
+
 export default function AdminIndexScreen() {
+  const t = useTheme()
+  const styles = useMemo(() => makeStyles(t), [t])
   const router = useRouter()
 
   return (
@@ -44,29 +65,3 @@ export default function AdminIndexScreen() {
     </View>
   )
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: t.bg, padding: 16, paddingTop: 24 },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: t.surface,
-    borderRadius: 14,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: t.border,
-    gap: 14,
-  },
-  iconWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    backgroundColor: t.accentBg,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  text: { flex: 1 },
-  label: { fontSize: 16, fontWeight: '700', color: t.text, marginBottom: 2 },
-  desc: { fontSize: 13, color: t.textMuted, lineHeight: 18 },
-})

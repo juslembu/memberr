@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useMemo, useState, useCallback } from 'react'
 import {
   View,
   Text,
@@ -11,9 +11,32 @@ import {
 import { useRouter, useFocusEffect } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { api, ApiError } from '../../../lib/api'
+import { useTheme } from '../../../lib/ThemeContext'
+import type { Theme } from '../../../lib/theme'
 import type { SharedCard } from '@memberr/shared'
 
+function makeStyles(t: Theme) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: t.bg },
+    center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+    list: { padding: 16 },
+    empty: { alignItems: 'center', paddingTop: 80, gap: 8 },
+    emptyText: { fontSize: 18, fontWeight: '600', color: t.text },
+    emptySubtext: { fontSize: 14, color: t.textSubtle },
+    card: {
+      backgroundColor: t.surface, borderRadius: 12, padding: 16, marginBottom: 10,
+      borderLeftWidth: 4, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+      shadowColor: t.text, shadowOpacity: 0.05, shadowRadius: 4, elevation: 2,
+    },
+    storeName: { fontSize: 17, fontWeight: '700', color: t.text },
+    sharedBy: { fontSize: 13, color: t.textMuted, marginTop: 2 },
+    error: { color: t.errorText, textAlign: 'center', padding: 16 },
+  })
+}
+
 export default function SharedWithMeScreen() {
+  const t = useTheme()
+  const styles = useMemo(() => makeStyles(t), [t])
   const router = useRouter()
   const [shared, setShared] = useState<SharedCard[]>([])
   const [loading, setLoading] = useState(true)
@@ -39,7 +62,7 @@ export default function SharedWithMeScreen() {
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#0EA5E9" />
+        <ActivityIndicator size="large" color={t.accent} />
       </View>
     )
   }
@@ -54,18 +77,19 @@ export default function SharedWithMeScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={() => { setRefreshing(true); load(true) }}
+            tintColor={t.accent}
           />
         }
         ListEmptyComponent={
           <View style={styles.empty}>
-            <Ionicons name="people-outline" size={48} color="#d1d5db" />
+            <Ionicons name="people-outline" size={48} color={t.textSubtle} />
             <Text style={styles.emptyText}>Nothing shared yet</Text>
             <Text style={styles.emptySubtext}>Cards shared with you will appear here</Text>
           </View>
         }
         renderItem={({ item }) => (
           <TouchableOpacity
-            style={[styles.card, { borderLeftColor: item.card.color ?? '#0EA5E9' }]}
+            style={[styles.card, { borderLeftColor: item.card.color ?? t.accent }]}
             onPress={() => router.push(`/(tabs)/shared-with-me/${item.shareId}`)}
             activeOpacity={0.8}
           >
@@ -76,9 +100,9 @@ export default function SharedWithMeScreen() {
               </Text>
             </View>
             {item.isPinned && (
-              <Ionicons name="bookmark" size={14} color={item.card.color ?? '#0EA5E9'} style={{ marginRight: 8 }} />
+              <Ionicons name="bookmark" size={14} color={item.card.color ?? t.accent} style={{ marginRight: 8 }} />
             )}
-            <Ionicons name="chevron-forward" size={18} color="#9ca3af" />
+            <Ionicons name="chevron-forward" size={18} color={t.textSubtle} />
           </TouchableOpacity>
         )}
       />
@@ -86,20 +110,3 @@ export default function SharedWithMeScreen() {
     </View>
   )
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f9fafb' },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  list: { padding: 16 },
-  empty: { alignItems: 'center', paddingTop: 80, gap: 8 },
-  emptyText: { fontSize: 18, fontWeight: '600', color: '#374151' },
-  emptySubtext: { fontSize: 14, color: '#9ca3af' },
-  card: {
-    backgroundColor: '#fff', borderRadius: 12, padding: 16, marginBottom: 10,
-    borderLeftWidth: 4, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4, elevation: 2,
-  },
-  storeName: { fontSize: 17, fontWeight: '700', color: '#111827' },
-  sharedBy: { fontSize: 13, color: '#6b7280', marginTop: 2 },
-  error: { color: '#ef4444', textAlign: 'center', padding: 16 },
-})

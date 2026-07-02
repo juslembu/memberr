@@ -1,7 +1,10 @@
+import { useMemo } from 'react'
 import { View, Text, StyleSheet } from 'react-native'
 import type { BarcodeType } from '@memberr/shared'
 import BarcodeNative from 'react-native-barcode-svg'
 import QRCode from 'react-native-qrcode-svg'
+import { useTheme } from '../lib/ThemeContext'
+import type { Theme } from '../lib/theme'
 
 interface Props {
   value: string
@@ -27,7 +30,23 @@ function isRenderableValue(value: string, type: BarcodeType): boolean {
   return true
 }
 
+function makeStyles(t: Theme) {
+  return StyleSheet.create({
+    barcodeWrap: { alignItems: 'center', backgroundColor: t.surface, padding: 8, borderRadius: 8 },
+    qrWrap: { alignItems: 'center', backgroundColor: t.surface, padding: 12, borderRadius: 8 },
+    fallback: {
+      backgroundColor: t.bg, borderRadius: 8, justifyContent: 'center',
+      alignItems: 'center', padding: 12,
+    },
+    fallbackType: { fontSize: 11, color: t.textSubtle, textTransform: 'uppercase', marginBottom: 4 },
+    fallbackValue: { fontSize: 14, color: t.text, textAlign: 'center', fontWeight: '600' },
+  })
+}
+
 export function BarcodeDisplay({ value, type, width = 280, height = 100 }: Props) {
+  const t = useTheme()
+  const styles = useMemo(() => makeStyles(t), [t])
+
   if (!value) return null
 
   if (type === 'QR_CODE') {
@@ -49,7 +68,7 @@ export function BarcodeDisplay({ value, type, width = 280, height = 100 }: Props
           width={1.2}
           height={height}
           maxWidth={width}
-          lineColor="#111827"
+          lineColor={t.text as string}
           backgroundColor="transparent"
         />
       </View>
@@ -63,14 +82,3 @@ export function BarcodeDisplay({ value, type, width = 280, height = 100 }: Props
     </View>
   )
 }
-
-const styles = StyleSheet.create({
-  barcodeWrap: { alignItems: 'center', backgroundColor: '#fff', padding: 8, borderRadius: 8 },
-  qrWrap: { alignItems: 'center', backgroundColor: '#fff', padding: 12, borderRadius: 8 },
-  fallback: {
-    backgroundColor: '#f3f4f6', borderRadius: 8, justifyContent: 'center',
-    alignItems: 'center', padding: 12,
-  },
-  fallbackType: { fontSize: 11, color: '#9ca3af', textTransform: 'uppercase', marginBottom: 4 },
-  fallbackValue: { fontSize: 14, color: '#374151', textAlign: 'center', fontWeight: '600' },
-})

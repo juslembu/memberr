@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from 'react'
+import { useMemo, useState, useCallback, useRef, useEffect } from 'react'
 import {
   View,
   Text,
@@ -21,6 +21,8 @@ import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake'
 import { api, ApiError } from '../../../lib/api'
 import { getServerUrl } from '../../../lib/serverUrl'
 import { BarcodeDisplay } from '../../../components/BarcodeDisplay'
+import { useTheme } from '../../../lib/ThemeContext'
+import type { Theme } from '../../../lib/theme'
 import type { Card, CardShare, Invitation, PublicShare, BarcodeType } from '@memberr/shared'
 
 type ConfirmModal = {
@@ -36,9 +38,156 @@ function daysUntil(dateStr: string | null): number | null {
   return Math.ceil((new Date(dateStr).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
 }
 
+function makeStyles(t: Theme) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: t.bg },
+    center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+    errorBanner: { backgroundColor: t.errorBg, padding: 14, borderBottomWidth: 1, borderBottomColor: t.border },
+    errorText: { color: t.errorText, fontSize: 14, textAlign: 'center' },
+    cardHero: { padding: 24, paddingTop: 32, paddingBottom: 16 },
+    heroHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 },
+    heroStore: { flex: 1, fontSize: 28, fontWeight: '800', color: '#fff' },
+    heroLogo: { width: 64, height: 64, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.15)' },
+    heroNumber: { fontSize: 18, color: 'rgba(255,255,255,0.85)', letterSpacing: 2, marginTop: 12 },
+    expiryRow: {
+      flexDirection: 'row', alignItems: 'center', gap: 5,
+      marginTop: 8, backgroundColor: 'rgba(0,0,0,0.15)',
+      alignSelf: 'flex-start', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4,
+    },
+    expiryRowWarn: { backgroundColor: 'rgba(249,115,22,0.7)' },
+    expiryRowExpired: { backgroundColor: 'rgba(239,68,68,0.7)' },
+    expiryLabel: { fontSize: 12, color: '#fff', fontWeight: '600' },
+    heroActions: { flexDirection: 'row', gap: 8, marginTop: 16 },
+    heroBtn: {
+      flexDirection: 'row', alignItems: 'center', gap: 5,
+      backgroundColor: 'rgba(255,255,255,0.18)', borderRadius: 10,
+      paddingHorizontal: 12, paddingVertical: 7,
+    },
+    heroBtnText: { color: '#fff', fontSize: 13, fontWeight: '600' },
+    barcodeSection: { backgroundColor: t.surface, padding: 24, alignItems: 'center', gap: 8 },
+    barcodeLabel: { fontSize: 12, color: t.textSubtle, textTransform: 'uppercase', letterSpacing: 1 },
+    section: { backgroundColor: t.surface, padding: 20, marginTop: 12 },
+    sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
+    sectionTitle: { fontSize: 16, fontWeight: '700', color: t.text, marginBottom: 12 },
+    notes: { fontSize: 15, color: t.textMuted, lineHeight: 22 },
+    cardImage: { width: '100%', height: 200, borderRadius: 10, backgroundColor: t.bg, marginTop: 8 },
+    fullImageOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.92)', justifyContent: 'center', alignItems: 'center' },
+    fullImage: { width: '100%', height: '80%' },
+    fullImageClose: {
+      position: 'absolute', top: 48, right: 20,
+      width: 40, height: 40, borderRadius: 20,
+      backgroundColor: 'rgba(255,255,255,0.15)', justifyContent: 'center', alignItems: 'center',
+    },
+    emptyShares: { fontSize: 14, color: t.textSubtle, textAlign: 'center', paddingVertical: 12 },
+    shareRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, gap: 12 },
+    shareAvatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: t.accentBg, justifyContent: 'center', alignItems: 'center' },
+    shareAvatarText: { fontSize: 16, fontWeight: '700', color: t.accent },
+    shareInfo: { flex: 1 },
+    shareName: { fontSize: 15, fontWeight: '600', color: t.text },
+    shareEmail: { fontSize: 13, color: t.textMuted },
+    reshareLabel: { fontSize: 11, color: t.accent, fontWeight: '600', marginTop: 2 },
+    pendingRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, gap: 12 },
+    pendingIcon: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#FFF7ED', justifyContent: 'center', alignItems: 'center' },
+    pendingActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    linkBtn: { padding: 4 },
+    addLinkBtn: {
+      flexDirection: 'row', alignItems: 'center', gap: 3,
+      borderWidth: 1, borderColor: t.border, borderRadius: 8,
+      paddingHorizontal: 8, paddingVertical: 4,
+      ...(Platform.OS === 'web' ? { cursor: 'pointer' } as any : {}),
+    },
+    addLinkBtnText: { fontSize: 12, color: t.accent, fontWeight: '600' },
+    publicLinkRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, gap: 12 },
+    publicLinkIcon: { width: 40, height: 40, borderRadius: 20, backgroundColor: t.accentBg, justifyContent: 'center', alignItems: 'center' },
+    publicSuccessCard: {
+      flexDirection: 'row', alignItems: 'center', gap: 12,
+      backgroundColor: '#F0FDF4', borderRadius: 12, padding: 14, marginBottom: 16, borderWidth: 1, borderColor: '#BBF7D0',
+    },
+    publicInfoBox: {
+      flexDirection: 'row', alignItems: 'flex-start', gap: 8,
+      backgroundColor: t.accentBg, borderRadius: 10, padding: 12, marginBottom: 14,
+    },
+    publicInfoText: { flex: 1, fontSize: 13, color: t.accent, lineHeight: 18 },
+    deleteButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, padding: 20, marginTop: 12, marginBottom: 40 },
+    deleteText: { color: '#ef4444', fontSize: 15, fontWeight: '600' },
+    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
+    confirmOverlay: { justifyContent: 'center' },
+    modalContent: { backgroundColor: t.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24 },
+    confirmContent: { marginHorizontal: 24, borderRadius: 16, width: '100%', maxWidth: 400, alignSelf: 'center' },
+    modalTitle: { fontSize: 18, fontWeight: '700', color: t.text, marginBottom: 16 },
+    confirmMessage: { fontSize: 14, color: t.textMuted, marginBottom: 8, lineHeight: 20 },
+    modalButton: { backgroundColor: t.accent, borderRadius: 12, paddingVertical: 16, alignItems: 'center', marginTop: 12 },
+    destructiveButton: { backgroundColor: '#ef4444' },
+    buttonDisabled: { opacity: 0.6 },
+    modalButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+    modalCancel: { paddingVertical: 14, alignItems: 'center' },
+    modalCancelText: { color: t.textMuted, fontSize: 15 },
+    shareModalOuter: { flex: 1, justifyContent: 'flex-end' },
+    shareModalScrim: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(15,23,42,0.45)' },
+    shareModalSheet: {
+      backgroundColor: t.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24,
+      paddingHorizontal: 20, paddingBottom: 36, paddingTop: 12,
+      shadowColor: '#0F172A', shadowOpacity: 0.18, shadowRadius: 24, shadowOffset: { width: 0, height: -4 }, elevation: 20,
+      width: '100%', maxWidth: 480, alignSelf: 'center',
+    },
+    shareHandle: { width: 36, height: 4, borderRadius: 2, backgroundColor: t.border, alignSelf: 'center', marginBottom: 20 },
+    shareHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 20 },
+    shareIconWrap: { width: 40, height: 40, borderRadius: 12, backgroundColor: t.accentBg, justifyContent: 'center', alignItems: 'center' },
+    shareTitle: { fontSize: 16, fontWeight: '700', color: t.text },
+    shareSubtitle: { fontSize: 13, color: t.textMuted, marginTop: 1 },
+    shareCloseBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: t.bg, justifyContent: 'center', alignItems: 'center' },
+    shareSuccessCard: {
+      flexDirection: 'row', alignItems: 'center', gap: 12,
+      backgroundColor: '#F0FDF4', borderRadius: 12, padding: 14, marginBottom: 16, borderWidth: 1, borderColor: '#BBF7D0',
+    },
+    shareSuccessTitle: { fontSize: 14, fontWeight: '700', color: '#15803D' },
+    shareSuccessMsg: { fontSize: 12, color: '#16A34A', marginTop: 2 },
+    shareSuccessSub: { fontSize: 11, color: '#15803D', marginTop: 2, opacity: 0.8 },
+    copyLinkBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 6, backgroundColor: t.accentBg, borderRadius: 8 },
+    copyLinkText: { fontSize: 12, color: t.accent, fontWeight: '600' },
+    shareInputRow: {
+      flexDirection: 'row', alignItems: 'center', backgroundColor: t.bg,
+      borderRadius: 14, borderWidth: 1.5, borderColor: t.border,
+      paddingHorizontal: 14, paddingVertical: 12, gap: 4, marginBottom: 6,
+    },
+    shareInputRowError: { borderColor: '#FCA5A5', backgroundColor: '#FFF5F5' },
+    shareInput: {
+      flex: 1, fontSize: 15, color: t.text,
+      ...(Platform.OS === 'web' ? { outlineStyle: 'none' } as any : {}),
+    },
+    shareErrorRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 6, marginBottom: 14, paddingHorizontal: 2 },
+    shareErrorMsg: { flex: 1, fontSize: 13, color: '#DC2626', lineHeight: 18 },
+    durationSection: { marginBottom: 14 },
+    durationLabel: { fontSize: 13, fontWeight: '600', color: t.textMuted, marginBottom: 8 },
+    durationRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+    durationChip: {
+      paddingHorizontal: 12, paddingVertical: 7,
+      borderRadius: 20, borderWidth: 1.5, borderColor: t.border,
+      backgroundColor: t.bg,
+    },
+    durationChipActive: { borderColor: t.accent, backgroundColor: t.accentBg },
+    durationChipText: { fontSize: 13, fontWeight: '600', color: t.textMuted },
+    durationChipTextActive: { color: t.accent },
+    reshareToggleRow: {
+      flexDirection: 'row', alignItems: 'center', gap: 12,
+      backgroundColor: t.bg, borderRadius: 12, padding: 14, marginBottom: 14,
+    },
+    reshareToggleLabel: { fontSize: 14, fontWeight: '600', color: t.text },
+    reshareToggleSub: { fontSize: 12, color: t.textMuted, marginTop: 1 },
+    shareSendBtn: {
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+      backgroundColor: t.accent, borderRadius: 14, paddingVertical: 15, marginTop: 8,
+    },
+    shareSendBtnDisabled: { opacity: 0.45 },
+    shareSendBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
+  })
+}
+
 export default function CardDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>()
   const router = useRouter()
+  const t = useTheme()
+  const styles = useMemo(() => makeStyles(t), [t])
   const [card, setCard] = useState<Card | null>(null)
   const [shares, setShares] = useState<CardShare[]>([])
   const [pendingInvites, setPendingInvites] = useState<Invitation[]>([])
@@ -250,7 +399,7 @@ export default function CardDetailScreen() {
   if (loading || !card) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#0EA5E9" />
+        <ActivityIndicator size="large" color={t.accent} />
       </View>
     )
   }
@@ -267,7 +416,7 @@ export default function CardDetailScreen() {
         </View>
       )}
 
-      <View style={[styles.cardHero, { backgroundColor: card.color ?? '#0EA5E9' }]}>
+      <View style={[styles.cardHero, { backgroundColor: card.color ?? t.accent }]}>
         <View style={styles.heroHeader}>
           <Text style={styles.heroStore}>{card.storeName}</Text>
           {card.logoUrl ? (
@@ -276,7 +425,6 @@ export default function CardDetailScreen() {
         </View>
         <Text style={styles.heroNumber}>{card.cardNumber}</Text>
 
-        {/* Expiry indicator */}
         {card.expiresAt ? (
           <View style={[styles.expiryRow, isExpired && styles.expiryRowExpired, isExpiring && styles.expiryRowWarn]}>
             <Ionicons name={isExpired ? 'alert-circle' : 'calendar-outline'} size={13} color="#fff" />
@@ -290,7 +438,6 @@ export default function CardDetailScreen() {
           </View>
         ) : null}
 
-        {/* Hero action buttons */}
         <View style={styles.heroActions}>
           <TouchableOpacity style={styles.heroBtn} onPress={handlePin}>
             <Ionicons name={card.isPinned ? 'bookmark' : 'bookmark-outline'} size={18} color="#fff" />
@@ -341,7 +488,6 @@ export default function CardDetailScreen() {
         </View>
       )}
 
-      {/* Active shares */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Shared with ({shares.length})</Text>
@@ -370,7 +516,6 @@ export default function CardDetailScreen() {
         ))}
       </View>
 
-      {/* Pending invitations */}
       {pendingInvites.length > 0 && (
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Pending invitations ({pendingInvites.length})</Text>
@@ -393,7 +538,7 @@ export default function CardDetailScreen() {
               <View style={styles.pendingActions}>
                 {inv.token ? (
                   <TouchableOpacity style={styles.linkBtn} onPress={() => copyInviteLink(inv.token!)}>
-                    <Ionicons name="link-outline" size={16} color="#0EA5E9" />
+                    <Ionicons name="link-outline" size={16} color={t.accent} />
                   </TouchableOpacity>
                 ) : null}
                 <TouchableOpacity onPress={() => handleCancelInvite(inv.id)}>
@@ -405,15 +550,11 @@ export default function CardDetailScreen() {
         </View>
       )}
 
-      {/* Public share links */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Public links ({publicLinks.length})</Text>
-          <TouchableOpacity
-            style={styles.addLinkBtn}
-            onPress={openPublicModal}
-          >
-            <Ionicons name="add" size={14} color="#0EA5E9" />
+          <TouchableOpacity style={styles.addLinkBtn} onPress={openPublicModal}>
+            <Ionicons name="add" size={14} color={t.accent} />
             <Text style={styles.addLinkBtnText}>New</Text>
           </TouchableOpacity>
         </View>
@@ -427,14 +568,14 @@ export default function CardDetailScreen() {
           return (
             <View key={pl.id} style={styles.publicLinkRow}>
               <View style={styles.publicLinkIcon}>
-                <Ionicons name="link" size={16} color="#0EA5E9" />
+                <Ionicons name="link" size={16} color={t.accent} />
               </View>
               <View style={styles.shareInfo}>
                 <Text style={styles.shareName}>{pl.label ?? 'Public link'}</Text>
                 <Text style={styles.shareEmail}>Expires in {expiryStr}</Text>
               </View>
               <TouchableOpacity style={styles.linkBtn} onPress={() => copyPublicLink(pl.token)}>
-                <Ionicons name={copied ? 'checkmark' : 'copy-outline'} size={18} color={copied ? '#16A34A' : '#0EA5E9'} />
+                <Ionicons name={copied ? 'checkmark' : 'copy-outline'} size={18} color={copied ? '#16A34A' : t.accent} />
               </TouchableOpacity>
               <TouchableOpacity onPress={() => handleRevokePublicLink(pl.id)}>
                 <Ionicons name="close-circle-outline" size={22} color="#ef4444" />
@@ -489,7 +630,7 @@ export default function CardDetailScreen() {
                 <Text style={styles.shareSubtitle}>Anyone with the link can view this card</Text>
               </View>
               <TouchableOpacity style={styles.shareCloseBtn} onPress={() => { setShowPublicModal(false); setNewPublicLink(null); setPublicLabel('') }}>
-                <Ionicons name="close" size={18} color="#64748B" />
+                <Ionicons name="close" size={18} color={t.textMuted} />
               </TouchableOpacity>
             </View>
 
@@ -523,11 +664,11 @@ export default function CardDetailScreen() {
             {!newPublicLink ? (
               <>
                 <View style={styles.shareInputRow}>
-                  <Ionicons name="pricetag-outline" size={18} color="#94A3B8" style={{ marginRight: 8 }} />
+                  <Ionicons name="pricetag-outline" size={18} color={t.textSubtle} style={{ marginRight: 8 }} />
                   <TextInput
                     style={styles.shareInput}
                     placeholder="Label (optional, e.g. for family)"
-                    placeholderTextColor="#94A3B8"
+                    placeholderTextColor={t.textSubtle}
                     value={publicLabel}
                     onChangeText={setPublicLabel}
                     autoCapitalize="none"
@@ -537,7 +678,7 @@ export default function CardDetailScreen() {
                   />
                   {publicLabel.length > 0 && (
                     <TouchableOpacity onPress={() => setPublicLabel('')}>
-                      <Ionicons name="close-circle" size={18} color="#94A3B8" />
+                      <Ionicons name="close-circle" size={18} color={t.textSubtle} />
                     </TouchableOpacity>
                   )}
                 </View>
@@ -572,7 +713,7 @@ export default function CardDetailScreen() {
                 ) : null}
 
                 <View style={styles.publicInfoBox}>
-                  <Ionicons name="information-circle-outline" size={15} color="#0EA5E9" />
+                  <Ionicons name="information-circle-outline" size={15} color={t.accent} />
                   <Text style={styles.publicInfoText}>
                     No account needed to view. Suitable for showing at checkout.
                   </Text>
@@ -593,7 +734,7 @@ export default function CardDetailScreen() {
               </>
             ) : (
               <TouchableOpacity
-                style={[styles.shareSendBtn, { backgroundColor: '#0EA5E9', marginTop: 16 }]}
+                style={[styles.shareSendBtn, { backgroundColor: t.accent, marginTop: 16 }]}
                 onPress={() => { setNewPublicLink(null); setJustCreatedPublicLink(false); setPublicLabel(''); setPublicDuration('24h') }}
               >
                 <Ionicons name="add" size={16} color="#fff" />
@@ -617,14 +758,14 @@ export default function CardDetailScreen() {
             <View style={styles.shareHandle} />
             <View style={styles.shareHeader}>
               <View style={styles.shareIconWrap}>
-                <Ionicons name="person-add" size={20} color="#0EA5E9" />
+                <Ionicons name="person-add" size={20} color={t.accent} />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.shareTitle}>Share card</Text>
                 <Text style={styles.shareSubtitle}>Invite someone by email or username</Text>
               </View>
               <TouchableOpacity style={styles.shareCloseBtn} onPress={() => { setShowShareModal(false); setShareSuccess(''); setShareError(''); setCanReshare(false) }}>
-                <Ionicons name="close" size={18} color="#64748B" />
+                <Ionicons name="close" size={18} color={t.textMuted} />
               </TouchableOpacity>
             </View>
 
@@ -637,7 +778,7 @@ export default function CardDetailScreen() {
                 </View>
                 {shareSuccessToken ? (
                   <TouchableOpacity style={styles.copyLinkBtn} onPress={() => copyInviteLink(shareSuccessToken)}>
-                    <Ionicons name={linkCopied ? 'checkmark' : 'link-outline'} size={15} color="#0EA5E9" />
+                    <Ionicons name={linkCopied ? 'checkmark' : 'link-outline'} size={15} color={t.accent} />
                     <Text style={styles.copyLinkText}>{linkCopied ? 'Copied!' : 'Copy link'}</Text>
                   </TouchableOpacity>
                 ) : null}
@@ -645,11 +786,11 @@ export default function CardDetailScreen() {
             ) : null}
 
             <View style={[styles.shareInputRow, shareError ? styles.shareInputRowError : null]}>
-              <Ionicons name="search-outline" size={18} color={shareError ? '#DC2626' : '#94A3B8'} style={{ marginRight: 8 }} />
+              <Ionicons name="search-outline" size={18} color={shareError ? '#DC2626' : t.textSubtle} style={{ marginRight: 8 }} />
               <TextInput
                 style={styles.shareInput}
                 placeholder="Email or username"
-                placeholderTextColor="#94A3B8"
+                placeholderTextColor={t.textSubtle}
                 value={shareIdentifier}
                 onChangeText={(v) => { setShareIdentifier(v); setShareError(''); setShareSuccess('') }}
                 autoCapitalize="none"
@@ -660,10 +801,10 @@ export default function CardDetailScreen() {
               />
               {shareIdentifier.length > 0 && !sharing && (
                 <TouchableOpacity onPress={() => { setShareIdentifier(''); setShareError(''); setShareSuccess('') }}>
-                  <Ionicons name="close-circle" size={18} color="#94A3B8" />
+                  <Ionicons name="close-circle" size={18} color={t.textSubtle} />
                 </TouchableOpacity>
               )}
-              {sharing && <ActivityIndicator size="small" color="#0EA5E9" />}
+              {sharing && <ActivityIndicator size="small" color={t.accent} />}
             </View>
 
             {shareError ? (
@@ -673,7 +814,6 @@ export default function CardDetailScreen() {
               </View>
             ) : null}
 
-            {/* Duration picker */}
             <View style={styles.durationSection}>
               <Text style={styles.durationLabel}>Access duration</Text>
               <View style={styles.durationRow}>
@@ -697,7 +837,6 @@ export default function CardDetailScreen() {
               </View>
             </View>
 
-            {/* canReshare toggle */}
             <View style={styles.reshareToggleRow}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.reshareToggleLabel}>Allow resharing</Text>
@@ -706,8 +845,8 @@ export default function CardDetailScreen() {
               <Switch
                 value={canReshare}
                 onValueChange={setCanReshare}
-                trackColor={{ false: '#E2E8F0', true: '#BAE6FD' }}
-                thumbColor={canReshare ? '#0EA5E9' : '#94A3B8'}
+                trackColor={{ false: t.border, true: t.accentBg }}
+                thumbColor={canReshare ? t.accent : t.textSubtle}
               />
             </View>
 
@@ -729,147 +868,3 @@ export default function CardDetailScreen() {
     </ScrollView>
   )
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f9fafb' },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  errorBanner: { backgroundColor: '#fef2f2', padding: 14, borderBottomWidth: 1, borderBottomColor: '#fecaca' },
-  errorText: { color: '#dc2626', fontSize: 14, textAlign: 'center' },
-  cardHero: { padding: 24, paddingTop: 32, paddingBottom: 16 },
-  heroHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 },
-  heroStore: { flex: 1, fontSize: 28, fontWeight: '800', color: '#fff' },
-  heroLogo: { width: 64, height: 64, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.15)' },
-  heroNumber: { fontSize: 18, color: 'rgba(255,255,255,0.85)', letterSpacing: 2, marginTop: 12 },
-  expiryRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    marginTop: 8, backgroundColor: 'rgba(0,0,0,0.15)',
-    alignSelf: 'flex-start', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4,
-  },
-  expiryRowWarn: { backgroundColor: 'rgba(249,115,22,0.7)' },
-  expiryRowExpired: { backgroundColor: 'rgba(239,68,68,0.7)' },
-  expiryLabel: { fontSize: 12, color: '#fff', fontWeight: '600' },
-  heroActions: { flexDirection: 'row', gap: 8, marginTop: 16 },
-  heroBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    backgroundColor: 'rgba(255,255,255,0.18)', borderRadius: 10,
-    paddingHorizontal: 12, paddingVertical: 7,
-  },
-  heroBtnText: { color: '#fff', fontSize: 13, fontWeight: '600' },
-  barcodeSection: { backgroundColor: '#fff', padding: 24, alignItems: 'center', gap: 8 },
-  barcodeLabel: { fontSize: 12, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: 1 },
-  section: { backgroundColor: '#fff', padding: 20, marginTop: 12 },
-  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
-  sectionTitle: { fontSize: 16, fontWeight: '700', color: '#111827', marginBottom: 12 },
-  notes: { fontSize: 15, color: '#374151', lineHeight: 22 },
-  cardImage: { width: '100%', height: 200, borderRadius: 10, backgroundColor: '#f3f4f6', marginTop: 8 },
-  fullImageOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.92)', justifyContent: 'center', alignItems: 'center' },
-  fullImage: { width: '100%', height: '80%' },
-  fullImageClose: {
-    position: 'absolute', top: 48, right: 20,
-    width: 40, height: 40, borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.15)', justifyContent: 'center', alignItems: 'center',
-  },
-  emptyShares: { fontSize: 14, color: '#9ca3af', textAlign: 'center', paddingVertical: 12 },
-  shareRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, gap: 12 },
-  shareAvatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#E0F2FE', justifyContent: 'center', alignItems: 'center' },
-  shareAvatarText: { fontSize: 16, fontWeight: '700', color: '#0EA5E9' },
-  shareInfo: { flex: 1 },
-  shareName: { fontSize: 15, fontWeight: '600', color: '#111827' },
-  shareEmail: { fontSize: 13, color: '#6b7280' },
-  reshareLabel: { fontSize: 11, color: '#0EA5E9', fontWeight: '600', marginTop: 2 },
-  pendingRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, gap: 12 },
-  pendingIcon: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#FFF7ED', justifyContent: 'center', alignItems: 'center' },
-  pendingActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  linkBtn: { padding: 4 },
-  addLinkBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 3,
-    borderWidth: 1, borderColor: '#BAE6FD', borderRadius: 8,
-    paddingHorizontal: 8, paddingVertical: 4,
-    ...(Platform.OS === 'web' ? { cursor: 'pointer' } as any : {}),
-  },
-  addLinkBtnText: { fontSize: 12, color: '#0EA5E9', fontWeight: '600' },
-  publicLinkRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, gap: 12 },
-  publicLinkIcon: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#EFF6FF', justifyContent: 'center', alignItems: 'center' },
-  publicSuccessCard: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    backgroundColor: '#F0FDF4', borderRadius: 12, padding: 14, marginBottom: 16, borderWidth: 1, borderColor: '#BBF7D0',
-  },
-  publicInfoBox: {
-    flexDirection: 'row', alignItems: 'flex-start', gap: 8,
-    backgroundColor: '#EFF6FF', borderRadius: 10, padding: 12, marginBottom: 14,
-  },
-  publicInfoText: { flex: 1, fontSize: 13, color: '#0369A1', lineHeight: 18 },
-  deleteButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, padding: 20, marginTop: 12, marginBottom: 40 },
-  deleteText: { color: '#ef4444', fontSize: 15, fontWeight: '600' },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
-  confirmOverlay: { justifyContent: 'center' },
-  modalContent: { backgroundColor: '#fff', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24 },
-  confirmContent: { marginHorizontal: 24, borderRadius: 16, width: '100%', maxWidth: 400, alignSelf: 'center' },
-  modalTitle: { fontSize: 18, fontWeight: '700', color: '#111827', marginBottom: 16 },
-  confirmMessage: { fontSize: 14, color: '#6b7280', marginBottom: 8, lineHeight: 20 },
-  modalButton: { backgroundColor: '#0EA5E9', borderRadius: 12, paddingVertical: 16, alignItems: 'center', marginTop: 12 },
-  destructiveButton: { backgroundColor: '#ef4444' },
-  buttonDisabled: { opacity: 0.6 },
-  modalButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
-  modalCancel: { paddingVertical: 14, alignItems: 'center' },
-  modalCancelText: { color: '#6b7280', fontSize: 15 },
-  // Share modal
-  shareModalOuter: { flex: 1, justifyContent: 'flex-end' },
-  shareModalScrim: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(15,23,42,0.45)' },
-  shareModalSheet: {
-    backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24,
-    paddingHorizontal: 20, paddingBottom: 36, paddingTop: 12,
-    shadowColor: '#0F172A', shadowOpacity: 0.18, shadowRadius: 24, shadowOffset: { width: 0, height: -4 }, elevation: 20,
-    width: '100%', maxWidth: 480, alignSelf: 'center',
-  },
-  shareHandle: { width: 36, height: 4, borderRadius: 2, backgroundColor: '#E2E8F0', alignSelf: 'center', marginBottom: 20 },
-  shareHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 20 },
-  shareIconWrap: { width: 40, height: 40, borderRadius: 12, backgroundColor: '#F0F9FF', justifyContent: 'center', alignItems: 'center' },
-  shareTitle: { fontSize: 16, fontWeight: '700', color: '#0F172A' },
-  shareSubtitle: { fontSize: 13, color: '#64748B', marginTop: 1 },
-  shareCloseBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#F1F5F9', justifyContent: 'center', alignItems: 'center' },
-  shareSuccessCard: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    backgroundColor: '#F0FDF4', borderRadius: 12, padding: 14, marginBottom: 16, borderWidth: 1, borderColor: '#BBF7D0',
-  },
-  shareSuccessTitle: { fontSize: 14, fontWeight: '700', color: '#15803D' },
-  shareSuccessMsg: { fontSize: 12, color: '#16A34A', marginTop: 2 },
-  shareSuccessSub: { fontSize: 11, color: '#15803D', marginTop: 2, opacity: 0.8 },
-  copyLinkBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 6, backgroundColor: '#EFF6FF', borderRadius: 8 },
-  copyLinkText: { fontSize: 12, color: '#0EA5E9', fontWeight: '600' },
-  shareInputRow: {
-    flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8FAFC',
-    borderRadius: 14, borderWidth: 1.5, borderColor: '#E2E8F0',
-    paddingHorizontal: 14, paddingVertical: 12, gap: 4, marginBottom: 6,
-  },
-  shareInputRowError: { borderColor: '#FCA5A5', backgroundColor: '#FFF5F5' },
-  shareInput: {
-    flex: 1, fontSize: 15, color: '#0F172A',
-    ...(Platform.OS === 'web' ? { outlineStyle: 'none' } as any : {}),
-  },
-  shareErrorRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 6, marginBottom: 14, paddingHorizontal: 2 },
-  shareErrorMsg: { flex: 1, fontSize: 13, color: '#DC2626', lineHeight: 18 },
-  durationSection: { marginBottom: 14 },
-  durationLabel: { fontSize: 13, fontWeight: '600', color: '#64748B', marginBottom: 8 },
-  durationRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  durationChip: {
-    paddingHorizontal: 12, paddingVertical: 7,
-    borderRadius: 20, borderWidth: 1.5, borderColor: '#E2E8F0',
-    backgroundColor: '#F8FAFC',
-  },
-  durationChipActive: { borderColor: '#0EA5E9', backgroundColor: '#EFF6FF' },
-  durationChipText: { fontSize: 13, fontWeight: '600', color: '#64748B' },
-  durationChipTextActive: { color: '#0EA5E9' },
-  reshareToggleRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    backgroundColor: '#F8FAFC', borderRadius: 12, padding: 14, marginBottom: 14,
-  },
-  reshareToggleLabel: { fontSize: 14, fontWeight: '600', color: '#0F172A' },
-  reshareToggleSub: { fontSize: 12, color: '#64748B', marginTop: 1 },
-  shareSendBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    backgroundColor: '#0EA5E9', borderRadius: 14, paddingVertical: 15, marginTop: 8,
-  },
-  shareSendBtnDisabled: { opacity: 0.45 },
-  shareSendBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
-})

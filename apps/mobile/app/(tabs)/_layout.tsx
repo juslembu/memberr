@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Tabs } from 'expo-router'
 import { StyleSheet, Platform, View, Text } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
-import { t } from '../../lib/theme'
+import { useTheme } from '../../lib/ThemeContext'
 import { api } from '../../lib/api'
 import { registerBadgeRefresh } from '../../lib/invitationsBadge'
 
@@ -38,6 +38,7 @@ const badge = StyleSheet.create({
 })
 
 export default function TabsLayout() {
+  const t = useTheme()
   const [pendingCount, setPendingCount] = useState(0)
 
   useEffect(() => {

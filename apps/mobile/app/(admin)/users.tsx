@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useMemo, useState, useCallback } from 'react'
 import {
   View,
   Text,
@@ -15,14 +15,84 @@ import { useFocusEffect } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { api, ApiError } from '../../lib/api'
 import { useAuth } from '../../hooks/useAuth'
-import { t } from '../../lib/theme'
+import { useTheme } from '../../lib/ThemeContext'
+import type { Theme } from '../../lib/theme'
 import type { User } from '@memberr/shared'
 
 type AdminUser = Pick<User, 'id' | 'email' | 'username' | 'displayName' | 'isAdmin' | 'createdAt'>
 
 const webCursor = Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : {}
 
+function makeStyles(t: Theme) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: t.bg },
+    center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+    list: { padding: 16 },
+    errorBanner: { backgroundColor: t.errorBg, padding: 12, margin: 16, marginBottom: 0, borderRadius: 10 },
+    errorText: { color: t.errorText, fontSize: 14, textAlign: 'center' },
+
+    row: {
+      flexDirection: 'row', alignItems: 'center', backgroundColor: t.surface,
+      borderRadius: 12, padding: 14, marginBottom: 10,
+      shadowColor: t.text, shadowOpacity: 0.05, shadowRadius: 6,
+      shadowOffset: { width: 0, height: 2 }, elevation: 2,
+    },
+    avatar: {
+      width: 44, height: 44, borderRadius: 22, backgroundColor: t.accent,
+      justifyContent: 'center', alignItems: 'center', marginRight: 12,
+    },
+    avatarAdmin: { backgroundColor: t.brand },
+    avatarText: { color: '#fff', fontWeight: '700', fontSize: 15 },
+    info: { flex: 1 },
+    nameRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 2 },
+    username: { fontSize: 15, fontWeight: '700', color: t.text },
+    adminBadge: { backgroundColor: t.brand, borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2 },
+    adminBadgeText: { color: '#fff', fontSize: 10, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
+    selfBadge: { backgroundColor: t.accentBg, borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2 },
+    selfBadgeText: { color: t.accent, fontSize: 10, fontWeight: '700', letterSpacing: 0.5 },
+    email: { fontSize: 13, color: t.textMuted },
+    date: { fontSize: 11, color: t.textSubtle, marginTop: 2 },
+    deleteBtn: {
+      width: 36, height: 36, borderRadius: 8, backgroundColor: '#FEF2F2',
+      justifyContent: 'center', alignItems: 'center', marginLeft: 8,
+    },
+    resetBtn: {
+      width: 36, height: 36, borderRadius: 8, backgroundColor: t.accentBg,
+      justifyContent: 'center', alignItems: 'center', marginLeft: 8,
+    },
+    passwordInput: {
+      borderWidth: 1, borderColor: t.border, borderRadius: 10,
+      paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, color: t.text, marginBottom: 16,
+    },
+    resetErrorText: { color: t.errorText, fontSize: 13, marginBottom: 12, marginTop: -8 },
+    resetSuccessIconWrap: { alignItems: 'center', marginBottom: 8 },
+    tempPasswordRow: {
+      flexDirection: 'row', alignItems: 'center', backgroundColor: t.bg,
+      borderRadius: 10, borderWidth: 1, borderColor: t.border,
+      paddingHorizontal: 14, paddingVertical: 12, marginTop: 4, gap: 10,
+    },
+    tempPasswordText: { flex: 1, fontSize: 17, fontWeight: '700', color: t.text, letterSpacing: 1 },
+    copyBtn: { padding: 4 },
+
+    overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center', padding: 24 },
+    dialog: {
+      backgroundColor: t.surface, borderRadius: 16, padding: 24, width: '100%', maxWidth: 360,
+      shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 20, shadowOffset: { width: 0, height: 8 }, elevation: 12,
+    },
+    dialogTitle: { fontSize: 18, fontWeight: '700', color: t.text, marginBottom: 8, letterSpacing: -0.3 },
+    dialogBody: { fontSize: 14, color: t.textMuted, lineHeight: 20, marginBottom: 20 },
+    dialogActions: { flexDirection: 'row', gap: 10 },
+    cancelBtn: { flex: 1, paddingVertical: 12, borderRadius: 10, borderWidth: 1, borderColor: t.border, alignItems: 'center' },
+    cancelText: { fontSize: 15, fontWeight: '600', color: t.text },
+    confirmBtn: { flex: 1, paddingVertical: 12, borderRadius: 10, backgroundColor: '#DC2626', alignItems: 'center' },
+    btnDisabled: { opacity: 0.6 },
+    confirmText: { fontSize: 15, fontWeight: '600', color: '#fff' },
+  })
+}
+
 export default function AdminUsersScreen() {
+  const t = useTheme()
+  const styles = useMemo(() => makeStyles(t), [t])
   const { user: me } = useAuth()
   const [users, setUsers] = useState<AdminUser[]>([])
   const [loading, setLoading] = useState(true)
@@ -185,12 +255,7 @@ export default function AdminUsersScreen() {
         }}
       />
 
-      <Modal
-        visible={!!confirmId}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setConfirmId(null)}
-      >
+      <Modal visible={!!confirmId} transparent animationType="fade" onRequestClose={() => setConfirmId(null)}>
         <View style={styles.overlay}>
           <View style={styles.dialog}>
             <Text style={styles.dialogTitle}>Delete user?</Text>
@@ -199,18 +264,10 @@ export default function AdminUsersScreen() {
               <Text style={{ fontWeight: '700' }}>@{confirmUser?.username}</Text> and all their cards and shares.
             </Text>
             <View style={styles.dialogActions}>
-              <TouchableOpacity
-                style={[styles.cancelBtn, webCursor]}
-                onPress={() => setConfirmId(null)}
-                disabled={deleting}
-              >
+              <TouchableOpacity style={[styles.cancelBtn, webCursor]} onPress={() => setConfirmId(null)} disabled={deleting}>
                 <Text style={styles.cancelText}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.confirmBtn, deleting && styles.btnDisabled, webCursor]}
-                onPress={handleDelete}
-                disabled={deleting}
-              >
+              <TouchableOpacity style={[styles.confirmBtn, deleting && styles.btnDisabled, webCursor]} onPress={handleDelete} disabled={deleting}>
                 <Text style={styles.confirmText}>{deleting ? 'Deleting…' : 'Delete'}</Text>
               </TouchableOpacity>
             </View>
@@ -218,12 +275,7 @@ export default function AdminUsersScreen() {
         </View>
       </Modal>
 
-      <Modal
-        visible={!!resetId}
-        transparent
-        animationType="fade"
-        onRequestClose={closeResetModal}
-      >
+      <Modal visible={!!resetId} transparent animationType="fade" onRequestClose={closeResetModal}>
         <View style={styles.overlay}>
           <View style={styles.dialog}>
             {resetResult ? (
@@ -266,18 +318,10 @@ export default function AdminUsersScreen() {
                 />
                 {resetError ? <Text style={styles.resetErrorText}>{resetError}</Text> : null}
                 <View style={styles.dialogActions}>
-                  <TouchableOpacity
-                    style={[styles.cancelBtn, webCursor]}
-                    onPress={closeResetModal}
-                    disabled={resetting}
-                  >
+                  <TouchableOpacity style={[styles.cancelBtn, webCursor]} onPress={closeResetModal} disabled={resetting}>
                     <Text style={styles.cancelText}>Cancel</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.confirmBtn, resetting && styles.btnDisabled, webCursor]}
-                    onPress={handleResetPassword}
-                    disabled={resetting}
-                  >
+                  <TouchableOpacity style={[styles.confirmBtn, resetting && styles.btnDisabled, webCursor]} onPress={handleResetPassword} disabled={resetting}>
                     <Text style={styles.confirmText}>{resetting ? 'Resetting…' : 'Reset'}</Text>
                   </TouchableOpacity>
                 </View>
@@ -289,111 +333,3 @@ export default function AdminUsersScreen() {
     </View>
   )
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: t.bg },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  list: { padding: 16 },
-  errorBanner: { backgroundColor: t.errorBg, padding: 12, margin: 16, marginBottom: 0, borderRadius: 10 },
-  errorText: { color: t.errorText, fontSize: 14, textAlign: 'center' },
-
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: t.surface,
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 10,
-    shadowColor: t.text,
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
-  },
-  avatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: t.accent,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  avatarAdmin: { backgroundColor: t.brand },
-  avatarText: { color: '#fff', fontWeight: '700', fontSize: 15 },
-  info: { flex: 1 },
-  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 2 },
-  username: { fontSize: 15, fontWeight: '700', color: t.text },
-  adminBadge: { backgroundColor: t.brand, borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2 },
-  adminBadgeText: { color: '#fff', fontSize: 10, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
-  selfBadge: { backgroundColor: t.accentBg, borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2 },
-  selfBadgeText: { color: t.accent, fontSize: 10, fontWeight: '700', letterSpacing: 0.5 },
-  email: { fontSize: 13, color: t.textMuted },
-  date: { fontSize: 11, color: t.textSubtle, marginTop: 2 },
-  deleteBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 8,
-    backgroundColor: '#FEF2F2',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginLeft: 8,
-  },
-  resetBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 8,
-    backgroundColor: t.accentBg,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginLeft: 8,
-  },
-  passwordInput: {
-    borderWidth: 1,
-    borderColor: t.border,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 15,
-    color: t.text,
-    marginBottom: 16,
-  },
-  resetErrorText: { color: t.errorText, fontSize: 13, marginBottom: 12, marginTop: -8 },
-  resetSuccessIconWrap: { alignItems: 'center', marginBottom: 8 },
-  tempPasswordRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: t.bg,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: t.border,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    marginTop: 4,
-    gap: 10,
-  },
-  tempPasswordText: { flex: 1, fontSize: 17, fontWeight: '700', color: t.text, letterSpacing: 1 },
-  copyBtn: { padding: 4 },
-
-  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center', padding: 24 },
-  dialog: {
-    backgroundColor: t.surface,
-    borderRadius: 16,
-    padding: 24,
-    width: '100%',
-    maxWidth: 360,
-    shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowRadius: 20,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 12,
-  },
-  dialogTitle: { fontSize: 18, fontWeight: '700', color: t.text, marginBottom: 8, letterSpacing: -0.3 },
-  dialogBody: { fontSize: 14, color: t.textMuted, lineHeight: 20, marginBottom: 20 },
-  dialogActions: { flexDirection: 'row', gap: 10 },
-  cancelBtn: { flex: 1, paddingVertical: 12, borderRadius: 10, borderWidth: 1, borderColor: t.border, alignItems: 'center' },
-  cancelText: { fontSize: 15, fontWeight: '600', color: t.text },
-  confirmBtn: { flex: 1, paddingVertical: 12, borderRadius: 10, backgroundColor: '#DC2626', alignItems: 'center' },
-  btnDisabled: { opacity: 0.6 },
-  confirmText: { fontSize: 15, fontWeight: '600', color: '#fff' },
-})

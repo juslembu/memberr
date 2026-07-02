@@ -3,7 +3,7 @@ import { Ionicons } from '@expo/vector-icons'
 import { t } from '../lib/theme'
 
 interface Props {
-  icon: keyof typeof Ionicons.glyphMap
+  icon?: keyof typeof Ionicons.glyphMap
   title: string
 }
 
@@ -11,7 +11,7 @@ export function HeaderTitle({ icon, title }: Props) {
   if (!title) return null
   return (
     <View style={styles.row}>
-      <Ionicons name={icon} size={17} color={t.accent} />
+      {icon ? <Ionicons name={icon} size={17} color={t.accent} /> : null}
       <Text style={styles.text} numberOfLines={1}>{title}</Text>
     </View>
   )

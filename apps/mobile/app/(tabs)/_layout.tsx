@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons'
 import { t } from '../../lib/theme'
 import { api } from '../../lib/api'
 import { registerBadgeRefresh } from '../../lib/invitationsBadge'
+import { CardLogo } from '../../components/CardLogo'
 
 function BadgeIcon({ name, focused, color, count }: {
   name: string; focused: boolean; color: string; count: number
@@ -81,8 +82,8 @@ export default function TabsLayout() {
         options={{
           title: 'Cards',
           tabBarItemStyle: { flex: 1 },
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'card' : 'card-outline'} size={22} color={color} />
+          tabBarIcon: ({ focused }) => (
+            <CardLogo size={26} opacity={focused ? 1 : 0.35} />
           ),
         }}
       />

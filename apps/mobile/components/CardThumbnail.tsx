@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { View, Text, Image, StyleSheet, Pressable, Platform } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import type { Card, BarcodeType } from '@memberr/shared'
@@ -65,8 +65,8 @@ function makeStyles(_t: Theme) {
     expiryText: { fontSize: 9, fontWeight: '700', color: '#fff' },
     sharedBy: { fontSize: 10, color: 'rgba(255,255,255,0.7)', fontWeight: '600', marginBottom: 6 },
     barcodeWrap: {
-      height: 52, justifyContent: 'center', alignItems: 'flex-start', marginVertical: 6,
-      backgroundColor: 'rgba(255,255,255,0.9)', borderRadius: 6, padding: 4, overflow: 'hidden',
+      justifyContent: 'center', alignItems: 'center', marginVertical: 6,
+      backgroundColor: 'rgba(255,255,255,0.9)', borderRadius: 6, paddingVertical: 8, overflow: 'hidden',
     },
     number: { fontSize: 10, color: 'rgba(255,255,255,0.75)', letterSpacing: 1, fontWeight: '500', marginTop: 4 },
   })
@@ -75,6 +75,7 @@ function makeStyles(_t: Theme) {
 export function CardThumbnail({ card, onPress, sharedBy, shareExpiresAt }: Props) {
   const t = useTheme()
   const styles = useMemo(() => makeStyles(t), [t])
+  const [barcodeWidth, setBarcodeWidth] = useState(0)
 
   const bg = card.color ?? '#0EA5E9'
   // For shared cards, show share expiry; for own cards show card expiry
@@ -137,11 +138,11 @@ export function CardThumbnail({ card, onPress, sharedBy, shareExpiresAt }: Props
       </View>
 
       {/* Barcode — always at the same vertical position */}
-      <View style={styles.barcodeWrap}>
+      <View style={styles.barcodeWrap} onLayout={e => setBarcodeWidth(e.nativeEvent.layout.width)}>
         <BarcodeDisplay
           value={card.cardNumber}
           type={card.barcodeType as BarcodeType}
-          width={150}
+          width={barcodeWidth > 0 ? barcodeWidth : 150}
           height={36}
         />
       </View>

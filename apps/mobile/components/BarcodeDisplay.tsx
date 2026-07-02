@@ -32,8 +32,8 @@ function isRenderableValue(value: string, type: BarcodeType): boolean {
 
 function makeStyles(t: Theme) {
   return StyleSheet.create({
-    barcodeWrap: { alignItems: 'center', backgroundColor: t.surface, padding: 8, borderRadius: 8 },
-    qrWrap: { alignItems: 'center', backgroundColor: t.surface, padding: 12, borderRadius: 8 },
+    barcodeWrap: { alignItems: 'center' },
+    qrWrap: { alignItems: 'center', backgroundColor: '#fff', padding: 12, borderRadius: 8 },
     fallback: {
       backgroundColor: t.bg, borderRadius: 8, justifyContent: 'center',
       alignItems: 'center', padding: 12,
@@ -68,7 +68,7 @@ export function BarcodeDisplay({ value, type, width = 280, height = 100 }: Props
           width={1.2}
           height={height}
           maxWidth={width}
-          lineColor={t.text as string}
+          lineColor='#0F172A'
           backgroundColor="transparent"
         />
       </View>

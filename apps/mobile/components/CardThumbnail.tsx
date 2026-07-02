@@ -40,13 +40,19 @@ export function CardThumbnail({ card, onPress, sharedBy, shareExpiresAt }: Props
         <View style={styles.top}>
           <Text style={styles.store} numberOfLines={2}>{card.storeName}</Text>
           <View style={styles.topRight}>
-            {card.isPinned ? (
+            {card.logoUrl ? (
+              <View>
+                <Image source={{ uri: card.logoUrl }} style={styles.logo} resizeMode="contain" />
+                {card.isPinned ? (
+                  <View style={styles.pinOnLogo}>
+                    <Ionicons name="bookmark" size={9} color="#fff" />
+                  </View>
+                ) : null}
+              </View>
+            ) : card.isPinned ? (
               <View style={styles.pinBadge}>
                 <Ionicons name="bookmark" size={11} color="#fff" />
               </View>
-            ) : null}
-            {card.logoUrl ? (
-              <Image source={{ uri: card.logoUrl }} style={styles.logo} resizeMode="contain" />
             ) : null}
           </View>
         </View>
@@ -161,6 +167,15 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  pinOnLogo: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    borderRadius: 4,
+    paddingHorizontal: 3,
+    paddingVertical: 2,
   },
   expiryBadge: {
     flexDirection: 'row',

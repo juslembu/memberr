@@ -47,7 +47,6 @@ export const updateCardSchema = createCardSchema.partial()
 
 export const shareCardSchema = z.object({
   identifier: z.string().min(1),
-  canReshare: z.boolean().optional(),
   expiresAt: z.string().datetime().optional(),
 })
 

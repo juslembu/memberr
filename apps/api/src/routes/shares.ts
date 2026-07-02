@@ -36,7 +36,6 @@ export default async function shareRoutes(app: FastifyInstance) {
         cardId: cardShares.cardId,
         sharedWith: cardShares.sharedWith,
         grantedBy: cardShares.grantedBy,
-        canReshare: cardShares.canReshare,
         expiresAt: cardShares.expiresAt,
         revokedAt: cardShares.revokedAt,
         createdAt: cardShares.createdAt,
@@ -86,7 +85,7 @@ export default async function shareRoutes(app: FastifyInstance) {
     if (!card) return reply.code(404).send({ error: 'Not found' })
     if (card.ownerId !== request.userId) return reply.code(403).send({ error: 'Forbidden' })
 
-    const { identifier, canReshare, expiresAt: shareExpiresAtStr } = body.data
+    const { identifier, expiresAt: shareExpiresAtStr } = body.data
 
     const [self] = await db
       .select({ id: users.id, email: users.email, username: users.username, displayName: users.displayName, pushToken: users.pushToken })

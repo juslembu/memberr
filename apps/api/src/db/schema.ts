@@ -78,7 +78,6 @@ export const cardShares = pgTable(
     grantedBy: uuid('granted_by')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
-    canReshare: boolean('can_reshare').default(false).notNull(),
     expiresAt: timestamp('expires_at', { withTimezone: true }),
     revokedAt: timestamp('revoked_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
@@ -148,6 +147,12 @@ export const cardOrder = pgTable(
   },
   (t) => [uniqueIndex('card_order_user_card_idx').on(t.userId, t.cardId)],
 )
+
+export const serverSettings = pgTable('server_settings', {
+  key: text('key').primaryKey(),
+  value: text('value').notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+})
 
 export const usersRelations = relations(users, ({ many }) => ({
   cards: many(cards),

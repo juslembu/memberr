@@ -77,7 +77,6 @@ export interface CardShare {
   cardId: string
   sharedWith: string
   grantedBy: string
-  canReshare: boolean
   expiresAt: string | null
   revokedAt: string | null
   createdAt: string
@@ -126,6 +125,10 @@ export interface PublicCardView {
 export interface ServerVersion {
   serverVersion: string
   minAppVersion: string
+}
+
+export interface ServerConfig {
+  registrationOpen: boolean
 }
 
 export interface SharedCard {

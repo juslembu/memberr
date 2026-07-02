@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState, useEffect } from 'react'
 import { View, Text, StyleSheet, Animated, PanResponder, Platform } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
+import * as Haptics from 'expo-haptics'
 import { useTheme } from '../lib/ThemeContext'
 import type { Theme } from '../lib/theme'
 import type { Card, SharedCard } from '@memberr/shared'
@@ -163,6 +164,7 @@ export function ReorderableCardList({ items, onReorder, pinnedCount = 0 }: Props
         activeKeyRef.current = itemKey(data[index])
         dragY.setValue(0)
         forceRender((n) => n + 1)
+        if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
       },
       onPanResponderMove: (_, gesture) => {
         dragY.setValue(gesture.dy)

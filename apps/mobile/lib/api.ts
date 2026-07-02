@@ -9,6 +9,7 @@ import type {
   Invitation,
   SharedCard,
   ServerVersion,
+  ServerConfig,
   PublicShare,
   PublicCardView,
   PredefinedShop,
@@ -109,6 +110,12 @@ export const api = {
   },
 
   auth: {
+    async config(): Promise<ServerConfig> {
+      const API_URL = await getServerUrl()
+      const res = await fetch(`${API_URL}/api/v1/auth/config`)
+      return json<ServerConfig>(res)
+    },
+
     async register(data: RegisterInput): Promise<{ user: User; accessToken: string }> {
       const API_URL = await getServerUrl()
       const res = await fetch(`${API_URL}/api/v1/auth/register`, {
@@ -208,6 +215,17 @@ export const api = {
 
     async deleteShop(id: string): Promise<void> {
       await json(await fetchWithAuth(`/api/v1/admin/shops/${id}`, { method: 'DELETE' }))
+    },
+
+    async getSettings(): Promise<Record<string, string>> {
+      return json(await fetchWithAuth('/api/v1/admin/settings'))
+    },
+
+    async updateSettings(updates: Record<string, string>): Promise<void> {
+      await json(await fetchWithAuth('/api/v1/admin/settings', {
+        method: 'PATCH',
+        body: JSON.stringify(updates),
+      }))
     },
   },
 

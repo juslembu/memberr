@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import {
   View,
   Text,
@@ -12,7 +12,7 @@ import {
 } from 'react-native'
 import { Link } from 'expo-router'
 import { useAuth } from '../../hooks/useAuth'
-import { ApiError } from '../../lib/api'
+import { api, ApiError } from '../../lib/api'
 import { useTheme } from '../../lib/ThemeContext'
 import type { Theme } from '../../lib/theme'
 
@@ -23,6 +23,9 @@ function makeStyles(t: Theme) {
 
     logo: { fontSize: 42, fontWeight: '800', color: t.brand, textAlign: 'center', marginBottom: 6, letterSpacing: -1.5 },
     subtitle: { fontSize: 15, color: t.textMuted, textAlign: 'center', marginBottom: 40 },
+    closedBox: { backgroundColor: t.errorBg, borderRadius: 14, padding: 28, alignItems: 'center', gap: 10, marginBottom: 24 },
+    closedTitle: { fontSize: 20, fontWeight: '800', color: t.errorText, letterSpacing: -0.3 },
+    closedSub: { fontSize: 14, color: t.errorText, opacity: 0.8, textAlign: 'center', lineHeight: 20 },
 
     splitContainer: { flex: 1, flexDirection: 'row' },
     leftPanel: { flex: 1, backgroundColor: t.brand, padding: 52, justifyContent: 'flex-end', paddingBottom: 60 },
@@ -59,8 +62,13 @@ export default function RegisterScreen() {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [registrationOpen, setRegistrationOpen] = useState<boolean | null>(null)
   const { width } = useWindowDimensions()
   const isWide = Platform.OS === 'web' && width >= 700
+
+  useEffect(() => {
+    api.auth.config().then(c => setRegistrationOpen(c.registrationOpen)).catch(() => setRegistrationOpen(true))
+  }, [])
 
   async function handleRegister() {
     if (!email || !username || !password) {
@@ -81,6 +89,19 @@ export default function RegisterScreen() {
       setLoading(false)
     }
   }
+
+  const closedNotice = (
+    <>
+      <View style={styles.closedBox}>
+        <Text style={styles.closedTitle}>Registration closed</Text>
+        <Text style={styles.closedSub}>This server is not accepting new accounts.</Text>
+      </View>
+      <View style={styles.footer}>
+        <Text style={styles.footerText}>Already have an account? </Text>
+        <Link href="/(auth)/login" style={styles.link}>Sign in</Link>
+      </View>
+    </>
+  )
 
   const formFields = (
     <>
@@ -154,6 +175,8 @@ export default function RegisterScreen() {
     </>
   )
 
+  const content = registrationOpen === false ? closedNotice : formFields
+
   if (isWide) {
     return (
       <View style={styles.splitContainer}>
@@ -166,7 +189,7 @@ export default function RegisterScreen() {
         <View style={styles.rightPanel}>
           <View style={styles.formBox}>
             <Text style={styles.formTitle}>Create account</Text>
-            {formFields}
+            {content}
           </View>
         </View>
       </View>
@@ -177,7 +200,7 @@ export default function RegisterScreen() {
     <ScrollView contentContainerStyle={styles.inner} keyboardShouldPersistTaps="handled">
       <Text style={styles.logo}>Memberr</Text>
       <Text style={styles.subtitle}>Create your account</Text>
-      {formFields}
+      {content}
     </ScrollView>
   )
 

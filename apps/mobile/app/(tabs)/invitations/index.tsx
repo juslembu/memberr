@@ -7,9 +7,11 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
+  Platform,
 } from 'react-native'
 import { useFocusEffect } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
+import * as Haptics from 'expo-haptics'
 import { api, ApiError } from '../../../lib/api'
 import { useTheme } from '../../../lib/ThemeContext'
 import type { Theme } from '../../../lib/theme'
@@ -75,6 +77,7 @@ export default function InvitationsScreen() {
   async function handleAccept(invitation: Invitation) {
     try {
       await api.invitations.accept(invitation.id)
+      if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
       triggerBadgeRefresh()
       await load()
     } catch (err) {
@@ -85,6 +88,7 @@ export default function InvitationsScreen() {
   async function handleDecline(invitation: Invitation) {
     try {
       await api.invitations.decline(invitation.id)
+      if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
       triggerBadgeRefresh()
       await load()
     } catch (err) {

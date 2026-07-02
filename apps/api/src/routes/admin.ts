@@ -2,9 +2,10 @@ import { FastifyInstance } from 'fastify'
 import { randomBytes } from 'crypto'
 import * as argon2 from 'argon2'
 import { db } from '../db/client.js'
-import { users, predefinedShops } from '../db/schema.js'
+import { users, predefinedShops, serverSettings } from '../db/schema.js'
 import { eq, ne, asc } from 'drizzle-orm'
 import { createShopSchema, adminResetPasswordSchema } from '@memberr/shared'
+import { setSetting } from '../lib/settings.js'
 
 const TEMP_PASSWORD_CHARSET = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789'
 
@@ -99,6 +100,20 @@ export default async function adminRoutes(app: FastifyInstance) {
       .where(eq(predefinedShops.id, id))
       .returning({ id: predefinedShops.id })
     if (!shop) return reply.code(404).send({ error: 'Shop not found' })
+    return { ok: true }
+  })
+
+  // Server settings
+  app.get('/settings', async () => {
+    const rows = await db.select().from(serverSettings)
+    return Object.fromEntries(rows.map((r) => [r.key, r.value]))
+  })
+
+  app.patch('/settings', async (request) => {
+    const body = request.body as Record<string, string>
+    for (const [key, value] of Object.entries(body)) {
+      await setSetting(key, String(value))
+    }
     return { ok: true }
   })
 }

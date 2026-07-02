@@ -5,6 +5,7 @@ import { eq, or } from 'drizzle-orm'
 import * as argon2 from 'argon2'
 import { registerSchema, loginSchema, changePasswordSchema, updateProfileSchema } from '@memberr/shared'
 import { authRouteHelpers } from '../plugins/auth.js'
+import { getSetting } from '../lib/settings.js'
 
 const REFRESH_COOKIE = 'memberr_refresh'
 
@@ -20,10 +21,20 @@ const USER_FIELDS = {
 } as const
 
 export default async function authRoutes(app: FastifyInstance) {
+  app.get('/config', { config: { public: true } }, async () => {
+    const value = await getSetting('registration_open', 'true')
+    return { registrationOpen: value === 'true' }
+  })
+
   app.post(
     '/register',
     { config: { public: true } },
     async (request, reply) => {
+      const regOpen = await getSetting('registration_open', 'true')
+      if (regOpen !== 'true') {
+        return reply.code(403).send({ error: 'Registration is currently closed on this server.' })
+      }
+
       const body = registerSchema.safeParse(request.body)
       if (!body.success) return reply.code(400).send({ error: body.error.flatten() })
 

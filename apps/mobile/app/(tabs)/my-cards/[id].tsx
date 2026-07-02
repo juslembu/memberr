@@ -9,18 +9,19 @@ import {
   Modal,
   ActivityIndicator,
   Image,
-  Switch,
   Share,
   Platform,
   KeyboardAvoidingView,
   Animated,
 } from 'react-native'
+import * as Haptics from 'expo-haptics'
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake'
 import { api, ApiError } from '../../../lib/api'
 import { getServerUrl } from '../../../lib/serverUrl'
 import { BarcodeDisplay } from '../../../components/BarcodeDisplay'
+import { BarcodeScanModal } from '../../../components/BarcodeScanModal'
 import { useTheme } from '../../../lib/ThemeContext'
 import type { Theme } from '../../../lib/theme'
 import type { Card, CardShare, Invitation, PublicShare, BarcodeType } from '@memberr/shared'
@@ -85,7 +86,7 @@ function makeStyles(t: Theme) {
     shareInfo: { flex: 1 },
     shareName: { fontSize: 15, fontWeight: '600', color: t.text },
     shareEmail: { fontSize: 13, color: t.textMuted },
-    reshareLabel: { fontSize: 11, color: t.accent, fontWeight: '600', marginTop: 2 },
+    barcodeScanHint: { fontSize: 11, color: t.textSubtle, marginTop: 2 },
     pendingRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, gap: 12 },
     pendingIcon: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#FFF7ED', justifyContent: 'center', alignItems: 'center' },
     pendingActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
@@ -168,12 +169,6 @@ function makeStyles(t: Theme) {
     durationChipActive: { borderColor: t.accent, backgroundColor: t.accentBg },
     durationChipText: { fontSize: 13, fontWeight: '600', color: t.textMuted },
     durationChipTextActive: { color: t.accent },
-    reshareToggleRow: {
-      flexDirection: 'row', alignItems: 'center', gap: 12,
-      backgroundColor: t.bg, borderRadius: 12, padding: 14, marginBottom: 14,
-    },
-    reshareToggleLabel: { fontSize: 14, fontWeight: '600', color: t.text },
-    reshareToggleSub: { fontSize: 12, color: t.textMuted, marginTop: 1 },
     shareSendBtn: {
       flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
       backgroundColor: t.accent, borderRadius: 14, paddingVertical: 15, marginTop: 8,
@@ -193,8 +188,8 @@ export default function CardDetailScreen() {
   const [pendingInvites, setPendingInvites] = useState<Invitation[]>([])
   const [loading, setLoading] = useState(true)
   const [shareIdentifier, setShareIdentifier] = useState('')
-  const [canReshare, setCanReshare] = useState(false)
   const [shareDuration, setShareDuration] = useState<string | null>(null)
+  const [showBarcodeModal, setShowBarcodeModal] = useState(false)
   const [sharing, setSharing] = useState(false)
   const [shareError, setShareError] = useState('')
   const [shareSuccess, setShareSuccess] = useState('')
@@ -265,6 +260,7 @@ export default function CardDetailScreen() {
     try {
       const updated = await api.cards.update(id, { isPinned: !card.isPinned })
       setCard(updated)
+      if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
     } catch {}
   }
 
@@ -289,12 +285,12 @@ export default function CardDetailScreen() {
     try {
       const result = await api.shares.share(id, {
         identifier: val,
-        canReshare,
         expiresAt: durationToExpiresAt(shareDuration),
       })
       setShareSuccess(`Invitation sent to ${val}`)
       setShareSuccessToken(result.invitation?.token)
       setShareIdentifier('')
+      if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
       await load()
     } catch (err) {
       setShareError(err instanceof ApiError ? err.message : 'Failed to send invitation')
@@ -458,10 +454,11 @@ export default function CardDetailScreen() {
         </View>
       </View>
 
-      <View style={styles.barcodeSection}>
+      <TouchableOpacity style={styles.barcodeSection} activeOpacity={0.85} onPress={() => setShowBarcodeModal(true)}>
         <BarcodeDisplay value={card.cardNumber} type={card.barcodeType as BarcodeType} width={300} height={120} />
         <Text style={styles.barcodeLabel}>{card.barcodeType.replace('_', ' ')}</Text>
-      </View>
+        {Platform.OS !== 'web' && <Text style={styles.barcodeScanHint}>Tap to scan</Text>}
+      </TouchableOpacity>
 
       {card.cardImageUrl && (
         <View style={styles.section}>
@@ -507,7 +504,6 @@ export default function CardDetailScreen() {
                 {share.sharedWithUser?.displayName ?? share.sharedWithUser?.username}
               </Text>
               <Text style={styles.shareEmail}>{share.sharedWithUser?.email}</Text>
-              {share.canReshare ? <Text style={styles.reshareLabel}>Can reshare</Text> : null}
             </View>
             <TouchableOpacity onPress={() => handleRevoke(share.id, share.sharedWithUser?.username ?? 'user')}>
               <Ionicons name="close-circle-outline" size={22} color="#ef4444" />
@@ -530,8 +526,8 @@ export default function CardDetailScreen() {
                   Invite expires {new Date(inv.expiresAt).toLocaleDateString()}
                 </Text>
                 {inv.shareExpiresAt ? (
-                  <Text style={styles.reshareLabel}>
-                    Access: until {new Date(inv.shareExpiresAt).toLocaleDateString()}
+                  <Text style={styles.shareEmail}>
+                    Access until {new Date(inv.shareExpiresAt).toLocaleDateString()}
                   </Text>
                 ) : null}
               </View>
@@ -750,10 +746,10 @@ export default function CardDetailScreen() {
         visible={showShareModal}
         animationType="none"
         transparent
-        onRequestClose={() => { setShowShareModal(false); setShareSuccess(''); setShareError(''); setCanReshare(false); setShareDuration(null) }}
+        onRequestClose={() => { setShowShareModal(false); setShareSuccess(''); setShareError(''); setShareDuration(null) }}
       >
         <KeyboardAvoidingView style={styles.shareModalOuter} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-          <TouchableOpacity style={styles.shareModalScrim} activeOpacity={1} onPress={() => { setShowShareModal(false); setShareSuccess(''); setShareError(''); setCanReshare(false) }} />
+          <TouchableOpacity style={styles.shareModalScrim} activeOpacity={1} onPress={() => { setShowShareModal(false); setShareSuccess(''); setShareError('') }} />
           <Animated.View style={[styles.shareModalSheet, { transform: [{ translateY: sheetAnim }] }]}>
             <View style={styles.shareHandle} />
             <View style={styles.shareHeader}>
@@ -764,7 +760,7 @@ export default function CardDetailScreen() {
                 <Text style={styles.shareTitle}>Share card</Text>
                 <Text style={styles.shareSubtitle}>Invite someone by email or username</Text>
               </View>
-              <TouchableOpacity style={styles.shareCloseBtn} onPress={() => { setShowShareModal(false); setShareSuccess(''); setShareError(''); setCanReshare(false) }}>
+              <TouchableOpacity style={styles.shareCloseBtn} onPress={() => { setShowShareModal(false); setShareSuccess(''); setShareError('') }}>
                 <Ionicons name="close" size={18} color={t.textMuted} />
               </TouchableOpacity>
             </View>
@@ -837,19 +833,6 @@ export default function CardDetailScreen() {
               </View>
             </View>
 
-            <View style={styles.reshareToggleRow}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.reshareToggleLabel}>Allow resharing</Text>
-                <Text style={styles.reshareToggleSub}>Let them share this card with others</Text>
-              </View>
-              <Switch
-                value={canReshare}
-                onValueChange={setCanReshare}
-                trackColor={{ false: t.border, true: t.accentBg }}
-                thumbColor={canReshare ? t.accent : t.textSubtle}
-              />
-            </View>
-
             <TouchableOpacity
               style={[styles.shareSendBtn, (sharing || !shareIdentifier.trim()) && styles.shareSendBtnDisabled]}
               onPress={handleShare}
@@ -865,6 +848,16 @@ export default function CardDetailScreen() {
           </Animated.View>
         </KeyboardAvoidingView>
       </Modal>
+
+      {card && (
+        <BarcodeScanModal
+          visible={showBarcodeModal}
+          value={card.cardNumber}
+          type={card.barcodeType as BarcodeType}
+          storeName={card.storeName}
+          onClose={() => setShowBarcodeModal(false)}
+        />
+      )}
     </ScrollView>
   )
 }

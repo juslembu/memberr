@@ -8,12 +8,15 @@ import {
   ActivityIndicator,
   Modal,
   TouchableOpacity,
+  Platform,
 } from 'react-native'
 import { useLocalSearchParams, useFocusEffect } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
+import * as Haptics from 'expo-haptics'
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake'
 import { api } from '../../../lib/api'
 import { BarcodeDisplay } from '../../../components/BarcodeDisplay'
+import { BarcodeScanModal } from '../../../components/BarcodeScanModal'
 import { useTheme } from '../../../lib/ThemeContext'
 import type { Theme } from '../../../lib/theme'
 import type { SharedCard, BarcodeType } from '@memberr/shared'
@@ -41,6 +44,7 @@ function makeStyles(t: Theme) {
     expiryLabel: { fontSize: 12, color: '#fff', fontWeight: '600' },
     barcodeSection: { backgroundColor: '#fff', padding: 24, alignItems: 'center', gap: 8 },
     barcodeLabel: { fontSize: 11, color: t.textSubtle, textTransform: 'uppercase', letterSpacing: 1 },
+    barcodeScanHint: { fontSize: 11, color: t.textSubtle, marginTop: 2 },
     section: { backgroundColor: t.surface, padding: 20, marginTop: 1 },
     sectionTitle: { fontSize: 13, fontWeight: '600', color: t.textMuted, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 8 },
     notes: { fontSize: 15, color: t.text, lineHeight: 22 },
@@ -64,6 +68,7 @@ export default function SharedCardDetailScreen() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [fullImageVisible, setFullImageVisible] = useState(false)
+  const [showBarcodeModal, setShowBarcodeModal] = useState(false)
 
   useFocusEffect(
     useCallback(() => {
@@ -81,6 +86,7 @@ export default function SharedCardDetailScreen() {
     try {
       const result = await api.sharedWithMe.togglePin(shareId)
       setIsPinned(result.isPinned)
+      if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
     } catch {}
   }
 
@@ -142,10 +148,11 @@ export default function SharedCardDetailScreen() {
         ) : null}
       </View>
 
-      <View style={styles.barcodeSection}>
+      <TouchableOpacity style={styles.barcodeSection} activeOpacity={0.85} onPress={() => setShowBarcodeModal(true)}>
         <BarcodeDisplay value={card.cardNumber} type={card.barcodeType as BarcodeType} width={300} height={120} />
         <Text style={styles.barcodeLabel}>{card.barcodeType.replace('_', ' ')}</Text>
-      </View>
+        {Platform.OS !== 'web' && <Text style={styles.barcodeScanHint}>Tap to scan</Text>}
+      </TouchableOpacity>
 
       {card.cardImageUrl && (
         <View style={styles.section}>
@@ -163,6 +170,14 @@ export default function SharedCardDetailScreen() {
           </TouchableOpacity>
         </TouchableOpacity>
       </Modal>
+
+      <BarcodeScanModal
+        visible={showBarcodeModal}
+        value={card.cardNumber}
+        type={card.barcodeType as BarcodeType}
+        storeName={card.storeName}
+        onClose={() => setShowBarcodeModal(false)}
+      />
 
       {card.notes && (
         <View style={styles.section}>

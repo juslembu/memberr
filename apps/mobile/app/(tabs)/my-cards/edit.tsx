@@ -8,12 +8,14 @@ import {
   ScrollView,
   Platform,
   ActivityIndicator,
+  Image,
+  TouchableOpacity,
 } from 'react-native'
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { api, ApiError } from '../../../lib/api'
 import { BARCODE_TYPES, BARCODE_LABELS } from '@memberr/shared'
-import type { BarcodeType, Card } from '@memberr/shared'
+import type { BarcodeType, Card, PredefinedShop } from '@memberr/shared'
 import { BarcodeDisplay } from '../../../components/BarcodeDisplay'
 
 const CARD_COLORS = [
@@ -31,13 +33,18 @@ export default function EditCardScreen() {
   const [barcodeType, setBarcodeType] = useState<BarcodeType>('CODE128')
   const [notes, setNotes] = useState('')
   const [color, setColor] = useState(CARD_COLORS[0])
+  const [logoUrl, setLogoUrl] = useState<string | null>(null)
   const [expiresAt, setExpiresAt] = useState('')
   const [saving, setSaving] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [showTypePicker, setShowTypePicker] = useState(false)
+  const [predefinedShops, setPredefinedShops] = useState<PredefinedShop[]>([])
+  const [selectedShopId, setSelectedShopId] = useState<string | null>(null)
+  const [shopInputFocused, setShopInputFocused] = useState(false)
 
   useFocusEffect(useCallback(() => {
+    api.shops.list().then(setPredefinedShops).catch(() => {})
     api.cards.get(id).then((c) => {
       setCard(c)
       setStoreName(c.storeName)
@@ -45,7 +52,9 @@ export default function EditCardScreen() {
       setBarcodeType(c.barcodeType as BarcodeType)
       setNotes(c.notes ?? '')
       setColor(c.color ?? CARD_COLORS[0])
+      setLogoUrl(c.logoUrl ?? null)
       setExpiresAt(c.expiresAt ? new Date(c.expiresAt).toISOString().slice(0, 10) : '')
+      setSelectedShopId(null)
       setLoading(false)
     }).catch(() => {
       setError('Failed to load card')
@@ -70,6 +79,7 @@ export default function EditCardScreen() {
         barcodeType,
         notes: notes.trim() || undefined,
         color,
+        logoUrl: logoUrl ?? undefined,
         expiresAt: parsedExpiry?.toISOString() ?? null,
       })
       router.back()
@@ -101,13 +111,66 @@ export default function EditCardScreen() {
         {error ? <View style={styles.errorBox}><Text style={styles.errorText}>{error}</Text></View> : null}
 
         <Text style={styles.label}>Shop name *</Text>
-        <TextInput
-          style={styles.input}
-          value={storeName}
-          onChangeText={setStoreName}
-          placeholder="e.g. Emart, Doremart, Everise"
-          placeholderTextColor="#9ca3af"
-        />
+        <View style={styles.shopInputWrap}>
+          <TextInput
+            style={[styles.input, selectedShopId ? styles.shopInputSelected : null]}
+            value={storeName}
+            onChangeText={(v) => { setStoreName(v); setSelectedShopId(null) }}
+            onFocus={() => setShopInputFocused(true)}
+            onBlur={() => setTimeout(() => setShopInputFocused(false), 100)}
+            placeholder="Search or type shop name…"
+            placeholderTextColor="#9ca3af"
+          />
+          {selectedShopId ? (
+            <TouchableOpacity
+              style={styles.shopClearBtn}
+              onPress={() => setSelectedShopId(null)}
+            >
+              <Ionicons name="close-circle" size={20} color="#9ca3af" />
+            </TouchableOpacity>
+          ) : null}
+        </View>
+
+        {selectedShopId ? (
+          <View style={styles.shopSelectedBadge}>
+            {logoUrl ? (
+              <Image source={{ uri: logoUrl }} style={styles.selectedLogo} resizeMode="contain" />
+            ) : null}
+            <Text style={styles.shopSelectedText}>Predefined shop · color & logo applied</Text>
+          </View>
+        ) : shopInputFocused && predefinedShops.length > 0 ? (() => {
+          const suggestions = predefinedShops.filter(s =>
+            storeName.length === 0 || s.name.toLowerCase().includes(storeName.toLowerCase())
+          )
+          if (suggestions.length === 0) return null
+          return (
+            <View style={styles.suggestions}>
+              <ScrollView keyboardShouldPersistTaps="always" nestedScrollEnabled style={{ maxHeight: 220 }}>
+                {suggestions.map((shop, index) => (
+                  <TouchableOpacity
+                    key={shop.id}
+                    style={[styles.suggestionItem, index < suggestions.length - 1 && styles.suggestionItemBorder]}
+                    onPress={() => {
+                      setSelectedShopId(shop.id)
+                      setStoreName(shop.name)
+                      setColor(shop.color)
+                      setLogoUrl(shop.logoUrl ?? null)
+                      setShopInputFocused(false)
+                    }}
+                  >
+                    {shop.logoUrl ? (
+                      <Image source={{ uri: shop.logoUrl }} style={styles.suggestionLogo} resizeMode="contain" />
+                    ) : (
+                      <View style={[styles.suggestionDot, { backgroundColor: shop.color }]} />
+                    )}
+                    <Text style={styles.suggestionText} numberOfLines={1}>{shop.name}</Text>
+                    <Ionicons name="chevron-forward" size={14} color="#d1d5db" />
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          )
+        })() : null}
 
         <Text style={styles.label}>Card / membership number *</Text>
         <TextInput
@@ -212,6 +275,30 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 10,
     paddingHorizontal: 14, paddingVertical: 12, fontSize: 16, color: '#111827', backgroundColor: '#fff',
   },
+  shopInputWrap: { position: 'relative' },
+  shopInputSelected: { paddingRight: 40 },
+  shopClearBtn: { position: 'absolute', right: 12, top: 0, bottom: 0, justifyContent: 'center' },
+  shopSelectedBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6, paddingHorizontal: 2 },
+  selectedLogo: { width: 16, height: 16, borderRadius: 3 },
+  shopSelectedText: { fontSize: 12, color: '#0EA5E9', fontWeight: '600' },
+  suggestions: {
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    borderRadius: 10,
+    marginTop: 4,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 4,
+  },
+  suggestionItem: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 14, paddingVertical: 12 },
+  suggestionItemBorder: { borderBottomWidth: 1, borderBottomColor: '#f3f4f6' },
+  suggestionLogo: { width: 28, height: 28, borderRadius: 6, backgroundColor: '#f3f4f6' },
+  suggestionDot: { width: 28, height: 28, borderRadius: 14 },
+  suggestionText: { flex: 1, fontSize: 15, fontWeight: '600', color: '#111827' },
   textarea: { minHeight: 80, textAlignVertical: 'top' },
   picker: {
     borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 10,

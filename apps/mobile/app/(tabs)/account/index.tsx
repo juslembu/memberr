@@ -9,6 +9,7 @@ import {
   Platform,
   ScrollView,
   ActivityIndicator,
+  Linking,
 } from 'react-native'
 import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
@@ -16,6 +17,8 @@ import { useAuth } from '../../../hooks/useAuth'
 import { api, ApiError } from '../../../lib/api'
 import { getServerUrl, clearServerUrl } from '../../../lib/serverUrl'
 import { t } from '../../../lib/theme'
+
+const GITHUB_URL = 'https://github.com/juslembu/memberr'
 
 const webCursor = Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : {}
 
@@ -206,6 +209,19 @@ export default function AccountScreen() {
         <Text style={styles.logoutText}>Log out</Text>
       </TouchableOpacity>
 
+      <View style={styles.ossSection}>
+        <Text style={styles.ossTitle}>Memberr is open source</Text>
+        <Text style={styles.ossBody}>Self-hostable, MIT licensed, built in the open.</Text>
+        <TouchableOpacity
+          style={[styles.githubBtn, webCursor]}
+          onPress={() => Linking.openURL(GITHUB_URL)}
+        >
+          <Ionicons name="logo-github" size={20} color={t.text} />
+          <Text style={styles.githubText}>View on GitHub</Text>
+          <Ionicons name="open-outline" size={14} color={t.textSubtle} style={styles.githubExternal} />
+        </TouchableOpacity>
+      </View>
+
       {/* Edit profile modal */}
       <Modal visible={profileVisible} transparent animationType="fade" onRequestClose={() => setProfileVisible(false)}>
         <View style={styles.overlay}>
@@ -384,6 +400,22 @@ const styles = StyleSheet.create({
     paddingVertical: 16, paddingHorizontal: 20,
   },
   logoutText: { fontSize: 16, fontWeight: '600', color: '#DC2626' },
+
+  ossSection: {
+    marginHorizontal: 16, marginTop: 28, paddingTop: 24,
+    borderTopWidth: 1, borderTopColor: t.border,
+    alignItems: 'center', gap: 4,
+  },
+  ossTitle: { fontSize: 13, fontWeight: '700', color: t.textMuted, letterSpacing: -0.1 },
+  ossBody: { fontSize: 12, color: t.textSubtle, textAlign: 'center', marginBottom: 12 },
+  githubBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    borderWidth: 1, borderColor: t.border, borderRadius: 20,
+    paddingVertical: 9, paddingHorizontal: 18,
+    backgroundColor: t.surface,
+  },
+  githubText: { fontSize: 14, fontWeight: '600', color: t.text },
+  githubExternal: { marginLeft: 2 },
 
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center', padding: 24 },
   dialog: {

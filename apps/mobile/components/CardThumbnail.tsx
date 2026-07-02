@@ -66,7 +66,8 @@ function makeStyles(_t: Theme) {
     sharedBy: { fontSize: 10, color: 'rgba(255,255,255,0.7)', fontWeight: '600', marginBottom: 6 },
     barcodeWrap: {
       justifyContent: 'center', alignItems: 'center', marginVertical: 6,
-      backgroundColor: 'rgba(255,255,255,0.9)', borderRadius: 6, paddingVertical: 8, overflow: 'hidden',
+      backgroundColor: 'rgba(255,255,255,0.9)', borderRadius: 6,
+      paddingVertical: 8, paddingHorizontal: 10, overflow: 'hidden',
     },
     number: { fontSize: 10, color: 'rgba(255,255,255,0.75)', letterSpacing: 1, fontWeight: '500', marginTop: 4 },
   })
@@ -142,7 +143,7 @@ export function CardThumbnail({ card, onPress, sharedBy, shareExpiresAt }: Props
         <BarcodeDisplay
           value={card.cardNumber}
           type={card.barcodeType as BarcodeType}
-          width={barcodeWidth > 0 ? barcodeWidth : 150}
+          width={barcodeWidth > 0 ? barcodeWidth - 20 : 130}
           height={36}
         />
       </View>

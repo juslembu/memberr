@@ -39,7 +39,7 @@ function makeStyles(t: Theme) {
     expiryRowWarn: { backgroundColor: 'rgba(249,115,22,0.7)' },
     expiryRowExpired: { backgroundColor: 'rgba(239,68,68,0.7)' },
     expiryLabel: { fontSize: 12, color: '#fff', fontWeight: '600' },
-    barcodeSection: { backgroundColor: t.surface, padding: 24, alignItems: 'center', gap: 8 },
+    barcodeSection: { backgroundColor: '#fff', padding: 24, alignItems: 'center', gap: 8 },
     barcodeLabel: { fontSize: 11, color: t.textSubtle, textTransform: 'uppercase', letterSpacing: 1 },
     section: { backgroundColor: t.surface, padding: 20, marginTop: 1 },
     sectionTitle: { fontSize: 13, fontWeight: '600', color: t.textMuted, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 8 },

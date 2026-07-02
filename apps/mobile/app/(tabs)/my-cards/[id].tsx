@@ -64,7 +64,7 @@ function makeStyles(t: Theme) {
       paddingHorizontal: 12, paddingVertical: 7,
     },
     heroBtnText: { color: '#fff', fontSize: 13, fontWeight: '600' },
-    barcodeSection: { backgroundColor: t.surface, padding: 24, alignItems: 'center', gap: 8 },
+    barcodeSection: { backgroundColor: '#fff', padding: 24, alignItems: 'center', gap: 8 },
     barcodeLabel: { fontSize: 12, color: t.textSubtle, textTransform: 'uppercase', letterSpacing: 1 },
     section: { backgroundColor: t.surface, padding: 20, marginTop: 12 },
     sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },

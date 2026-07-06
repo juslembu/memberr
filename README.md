@@ -118,6 +118,34 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --force-re
 
 Run the migration command again any time you pull changes that add new files under `apps/api/src/db/migrations/`.
 
+## Backups
+
+Memberr doesn't run backups for you — as a self-hosted app, that's on whoever runs the server, since
+where backups should live (local disk, S3, Backblaze, etc.) is a per-host decision. Two scripts are
+provided as a starting point:
+
+```bash
+./scripts/backup.sh                    # dumps to ./backups/memberr-<timestamp>.sql.gz, keeps 14 days
+./scripts/backup.sh /path/to/dir 30    # custom backup dir and retention (days)
+```
+
+To automate it, add a cron entry (daily at 3am, for example):
+
+```bash
+0 3 * * * cd /opt/memberr && ./scripts/backup.sh >> /var/log/memberr-backup.log 2>&1
+```
+
+Copy the `backups/` directory (or your custom dir) offsite periodically — a backup that only lives
+on the same disk as the database doesn't protect against disk failure.
+
+To restore a dump:
+
+```bash
+./scripts/restore.sh backups/memberr-20260706-030000.sql.gz
+```
+
+This overwrites all data in the running database, so it asks for confirmation before proceeding.
+
 <details>
 <summary>Local development setup</summary>
 

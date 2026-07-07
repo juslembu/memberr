@@ -14,7 +14,7 @@ import {
 import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { useAuth } from '../../../hooks/useAuth'
-import { api, ApiError } from '../../../lib/api'
+import { api, ApiError, APP_VERSION } from '../../../lib/api'
 import { getServerUrl, clearServerUrl } from '../../../lib/serverUrl'
 import { useTheme } from '../../../lib/ThemeContext'
 import { useThemePref, ThemePref } from '../../../lib/ThemeContext'
@@ -79,6 +79,7 @@ function makeStyles(t: Theme) {
     },
     ossTitle: { fontSize: 13, fontWeight: '700', color: t.textMuted, letterSpacing: -0.1 },
     ossBody: { fontSize: 12, color: t.textSubtle, textAlign: 'center', marginBottom: 12 },
+    versionText: { fontSize: 11, color: t.textSubtle, marginTop: 8 },
     githubBtn: {
       flexDirection: 'row', alignItems: 'center', gap: 8,
       borderWidth: 1, borderColor: t.border, borderRadius: 20,
@@ -333,6 +334,7 @@ export default function AccountScreen() {
           <Text style={styles.githubText}>View on GitHub</Text>
           <Ionicons name="open-outline" size={14} color={t.textSubtle} style={styles.githubExternal} />
         </TouchableOpacity>
+        <Text style={styles.versionText}>Version {APP_VERSION}</Text>
       </View>
 
       {/* Edit profile modal */}

@@ -20,6 +20,7 @@ import { Ionicons } from '@expo/vector-icons'
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake'
 import { api, ApiError } from '../../../lib/api'
 import { getServerUrl } from '../../../lib/serverUrl'
+import { copyText } from '../../../lib/copy'
 import { BarcodeDisplay } from '../../../components/BarcodeDisplay'
 import { BarcodeScanModal } from '../../../components/BarcodeScanModal'
 import { useTheme } from '../../../lib/ThemeContext'
@@ -50,6 +51,7 @@ function makeStyles(t: Theme) {
     heroStore: { flex: 1, fontSize: 28, fontWeight: '800', color: '#fff' },
     heroLogo: { width: 64, height: 64, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.15)' },
     heroNumber: { fontSize: 18, color: 'rgba(255,255,255,0.85)', letterSpacing: 2, marginTop: 12 },
+    heroNumberCopied: { color: 'rgba(255,255,255,0.55)' },
     expiryRow: {
       flexDirection: 'row', alignItems: 'center', gap: 5,
       marginTop: 8, backgroundColor: 'rgba(0,0,0,0.15)',
@@ -209,6 +211,7 @@ export default function CardDetailScreen() {
   const [newPublicLink, setNewPublicLink] = useState<PublicShare | null>(null)
   const [justCreatedPublicLink, setJustCreatedPublicLink] = useState(false)
   const [publicLinkCopied, setPublicLinkCopied] = useState<string | null>(null)
+  const [cardNumberCopied, setCardNumberCopied] = useState(false)
   const [serverUrl, setServerUrl] = useState('')
 
   useEffect(() => { getServerUrl().then(setServerUrl) }, [])
@@ -264,6 +267,14 @@ export default function CardDetailScreen() {
     } catch {}
   }
 
+  async function handleCopyCardNumber() {
+    if (!card) return
+    await copyText(card.cardNumber)
+    setCardNumberCopied(true)
+    if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+    setTimeout(() => setCardNumberCopied(false), 2000)
+  }
+
   function durationToExpiresAt(duration: string | null): string | undefined {
     if (!duration) return undefined
     const ms: Record<string, number> = {
@@ -307,6 +318,7 @@ export default function CardDetailScreen() {
       await Share.share({ url, message: url })
     }
     setLinkCopied(true)
+    if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
     setTimeout(() => setLinkCopied(false), 3000)
   }
 
@@ -335,8 +347,7 @@ export default function CardDetailScreen() {
       confirmLabel: 'Delete',
       destructive: true,
       onConfirm: async () => {
-        await api.cards.remove(id).catch(() => {})
-        router.replace('/(tabs)/my-cards')
+        router.replace({ pathname: '/(tabs)/my-cards', params: { deletedCard: id } })
       },
     })
   }
@@ -382,6 +393,7 @@ export default function CardDetailScreen() {
       await Share.share({ url, message: url })
     }
     setPublicLinkCopied(token)
+    if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
     setTimeout(() => setPublicLinkCopied(null), 3000)
   }
 
@@ -419,7 +431,11 @@ export default function CardDetailScreen() {
             <Image source={{ uri: card.logoUrl }} style={styles.heroLogo} resizeMode="contain" />
           ) : null}
         </View>
-        <Text style={styles.heroNumber}>{card.cardNumber}</Text>
+        <TouchableOpacity activeOpacity={0.7} onPress={handleCopyCardNumber}>
+          <Text style={[styles.heroNumber, cardNumberCopied && styles.heroNumberCopied]}>
+            {cardNumberCopied ? 'Copied!' : card.cardNumber}
+          </Text>
+        </TouchableOpacity>
 
         {card.expiresAt ? (
           <View style={[styles.expiryRow, isExpired && styles.expiryRowExpired, isExpiring && styles.expiryRowWarn]}>
@@ -439,15 +455,15 @@ export default function CardDetailScreen() {
             <Ionicons name={card.isPinned ? 'bookmark' : 'bookmark-outline'} size={18} color="#fff" />
             <Text style={styles.heroBtnText}>{card.isPinned ? 'Pinned' : 'Pin'}</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.heroBtn} onPress={() => router.push(`/(tabs)/my-cards/edit?id=${id}`)}>
+          <TouchableOpacity style={styles.heroBtn} onPress={() => { if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push(`/(tabs)/my-cards/edit?id=${id}`) }}>
             <Ionicons name="create-outline" size={18} color="#fff" />
             <Text style={styles.heroBtnText}>Edit</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.heroBtn} onPress={() => setShowShareModal(true)}>
+          <TouchableOpacity style={styles.heroBtn} onPress={() => { if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setShowShareModal(true) }}>
             <Ionicons name="person-add-outline" size={18} color="#fff" />
             <Text style={styles.heroBtnText}>Share</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.heroBtn} onPress={openPublicModal}>
+          <TouchableOpacity style={styles.heroBtn} onPress={() => { if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); openPublicModal() }}>
             <Ionicons name="link-outline" size={18} color="#fff" />
             <Text style={styles.heroBtnText}>Public link</Text>
           </TouchableOpacity>
@@ -581,7 +597,7 @@ export default function CardDetailScreen() {
         })}
       </View>
 
-      <TouchableOpacity style={styles.deleteButton} onPress={handleDelete}>
+      <TouchableOpacity style={styles.deleteButton} onPress={() => { if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); handleDelete() }}>
         <Ionicons name="trash-outline" size={18} color="#ef4444" />
         <Text style={styles.deleteText}>Delete card</Text>
       </TouchableOpacity>

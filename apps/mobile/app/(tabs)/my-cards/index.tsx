@@ -123,7 +123,8 @@ function makeStyles(t: Theme) {
     },
     filterRow: { flexDirection: 'row', gap: 8 },
     filterChip: {
-      borderRadius: 20, paddingVertical: 5, paddingHorizontal: 12,
+      flexDirection: 'row', alignItems: 'center', gap: 4, borderRadius: 20,
+      paddingVertical: 5, paddingHorizontal: 12,
       backgroundColor: t.bg, borderWidth: 1, borderColor: t.border,
       ...(Platform.OS === 'web' ? { cursor: 'pointer' } as any : {}),
     },
@@ -332,7 +333,7 @@ export default function MyCardsScreen() {
               }}
               disabled={reorderMode}
             >
-              <Ionicons name="swap-vertical-outline" size={13} color={sort !== 'custom' ? t.accent : t.textMuted} style={{ marginRight: 4 }} />
+              <Ionicons name="swap-vertical-outline" size={13} color={sort !== 'custom' ? t.accent : t.textMuted} />
               <Text style={[styles.filterChipText, sort !== 'custom' && styles.filterChipTextActive]}>
                 {sort === 'custom' ? 'Sort' : sort === 'name' ? 'Name' : sort === 'recent' ? 'Recent' : 'Expiry'}
               </Text>

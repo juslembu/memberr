@@ -352,6 +352,18 @@ export default function CardDetailScreen() {
     })
   }
 
+  function handleRestore() {
+    setConfirmModal({
+      title: 'Restore card',
+      message: 'Restore this card to your active cards?',
+      confirmLabel: 'Restore',
+      onConfirm: async () => {
+        await api.cards.unarchive(id).catch(() => {})
+        router.replace('/(tabs)/my-cards')
+      },
+    })
+  }
+
   function publicDurationToExpiresAt(d: string): string {
     const ms: Record<string, number> = {
       '1h': 60 * 60 * 1000,
@@ -597,10 +609,17 @@ export default function CardDetailScreen() {
         })}
       </View>
 
-      <TouchableOpacity style={styles.deleteButton} onPress={() => { if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); handleArchive() }}>
-        <Ionicons name="archive-outline" size={18} color="#ef4444" />
-        <Text style={styles.deleteText}>Archive card</Text>
-      </TouchableOpacity>
+      {card.isActive ? (
+        <TouchableOpacity style={styles.deleteButton} onPress={() => { if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); handleArchive() }}>
+          <Ionicons name="archive-outline" size={18} color="#ef4444" />
+          <Text style={styles.deleteText}>Archive card</Text>
+        </TouchableOpacity>
+      ) : (
+        <TouchableOpacity style={styles.deleteButton} onPress={() => { if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); handleRestore() }}>
+          <Ionicons name="arrow-undo-outline" size={18} color="#16A34A" />
+          <Text style={[styles.deleteText, { color: '#16A34A' }]}>Restore card</Text>
+        </TouchableOpacity>
+      )}
 
       {/* Confirm modal */}
       <Modal visible={!!confirmModal} animationType="fade" transparent>

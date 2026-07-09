@@ -218,7 +218,7 @@ export default function MyCardsScreen() {
   const [reorderMode, setReorderMode] = useState(false)
   const [undoItem, setUndoItem] = useState<ListItem | null>(null)
   const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const processedDeleteRef = useRef<string | null>(null)
+  const lastArchivedRef = useRef<string | null>(null)
   const [selectionMode, setSelectionMode] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [bulkShareOpen, setBulkShareOpen] = useState(false)
@@ -257,13 +257,19 @@ export default function MyCardsScreen() {
   }, [])
 
   useEffect(() => {
-    if (!params.archivedCard) return
+    if (!params.archivedCard) {
+      lastArchivedRef.current = null
+      return
+    }
     const archivedId = params.archivedCard
-    if (processedDeleteRef.current === archivedId) return
-    processedDeleteRef.current = archivedId
+    if (lastArchivedRef.current === archivedId) return
+    lastArchivedRef.current = archivedId
 
     const item = items.find((i) => cardIdOf(i) === archivedId)
-    if (!item) return
+    if (!item) {
+      router.setParams({ archivedCard: undefined })
+      return
+    }
 
     // Clear the param so the effect doesn't re-run
     router.setParams({ archivedCard: undefined })
@@ -510,7 +516,7 @@ export default function MyCardsScreen() {
 
       {undoItem && (
         <View style={styles.undoBanner}>
-          <Text style={styles.undoText}>Card deleted</Text>
+          <Text style={styles.undoText}>Card archived</Text>
           <TouchableOpacity style={styles.undoBtn} onPress={handleUndo}>
             <Ionicons name="arrow-undo-outline" size={16} color={t.accent} />
             <Text style={styles.undoBtnText}>Undo</Text>

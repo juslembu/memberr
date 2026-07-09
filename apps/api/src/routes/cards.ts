@@ -43,7 +43,7 @@ export default async function cardRoutes(app: FastifyInstance) {
     const [card] = await db
       .select()
       .from(cards)
-      .where(and(eq(cards.id, id), eq(cards.isActive, true)))
+      .where(eq(cards.id, id))
       .limit(1)
 
     if (!card) return reply.code(404).send({ error: 'Not found' })

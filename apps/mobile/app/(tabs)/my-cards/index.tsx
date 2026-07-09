@@ -10,6 +10,7 @@ import {
   RefreshControl,
   Platform,
   ScrollView,
+  Modal,
 } from 'react-native'
 import { useRouter, useFocusEffect, useLocalSearchParams } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
@@ -140,6 +141,12 @@ function makeStyles(t: Theme) {
     reorderChipActive: { backgroundColor: t.accent, borderColor: t.accent },
     reorderChipText: { fontSize: 13, fontWeight: '600', color: t.textMuted },
     reorderChipTextActive: { color: '#fff' },
+    archivedLink: {
+      flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start',
+      marginTop: 4,
+      ...(Platform.OS === 'web' ? { cursor: 'pointer' } as any : {}),
+    },
+    archivedLinkText: { fontSize: 12, color: t.accent, fontWeight: '600' },
     list: { padding: 16, paddingBottom: 100 },
     row: { gap: 10, marginBottom: 0 },
     empty: { alignItems: 'center', paddingTop: 72, paddingHorizontal: 32, gap: 10 },
@@ -172,6 +179,20 @@ function makeStyles(t: Theme) {
     undoText: { fontSize: 14, color: t.text, fontWeight: '500' },
     undoBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
     undoBtnText: { fontSize: 14, color: t.accent, fontWeight: '700' },
+    bulkBar: {
+      position: 'absolute', bottom: 24, left: 16, right: 16,
+      backgroundColor: t.surface, borderRadius: 16, padding: 14,
+      borderWidth: 1, borderColor: t.border,
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+      shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 16, shadowOffset: { width: 0, height: 4 }, elevation: 8,
+    },
+    bulkCount: { fontSize: 14, fontWeight: '700', color: t.text },
+    bulkActions: { flexDirection: 'row', gap: 10 },
+    bulkBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10 },
+    bulkBtnShare: { backgroundColor: t.accentBg },
+    bulkBtnArchive: { backgroundColor: '#FEF2F2' },
+    bulkBtnTextShare: { fontSize: 13, fontWeight: '700', color: t.accent },
+    bulkBtnTextArchive: { fontSize: 13, fontWeight: '700', color: '#DC2626' },
     fab: {
       position: 'absolute', bottom: 24, right: 24, width: 54, height: 54, borderRadius: 27,
       backgroundColor: t.accent, justifyContent: 'center', alignItems: 'center',
@@ -186,7 +207,7 @@ export default function MyCardsScreen() {
   const t = useTheme()
   const styles = useMemo(() => makeStyles(t), [t])
   const router = useRouter()
-  const params = useLocalSearchParams<{ deletedCard?: string }>()
+  const params = useLocalSearchParams<{ deletedCard?: string; archivedCard?: string }>()
   const [items, setItems] = useState<ListItem[]>([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
@@ -198,6 +219,12 @@ export default function MyCardsScreen() {
   const [undoItem, setUndoItem] = useState<ListItem | null>(null)
   const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const processedDeleteRef = useRef<string | null>(null)
+  const [selectionMode, setSelectionMode] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [bulkShareOpen, setBulkShareOpen] = useState(false)
+  const [bulkShareIdentifier, setBulkShareIdentifier] = useState('')
+  const [bulkSharing, setBulkSharing] = useState(false)
+  const [bulkShareError, setBulkShareError] = useState('')
 
   const load = useCallback(async (isRefresh = false) => {
     if (!isRefresh) setLoading(true)
@@ -230,35 +257,81 @@ export default function MyCardsScreen() {
   }, [])
 
   useEffect(() => {
-    if (!params.deletedCard) return
-    const deletedId = params.deletedCard
-    if (processedDeleteRef.current === deletedId) return
-    processedDeleteRef.current = deletedId
+    if (!params.archivedCard) return
+    const archivedId = params.archivedCard
+    if (processedDeleteRef.current === archivedId) return
+    processedDeleteRef.current = archivedId
 
-    const item = items.find((i) => cardIdOf(i) === deletedId)
+    const item = items.find((i) => cardIdOf(i) === archivedId)
     if (!item) return
 
     // Clear the param so the effect doesn't re-run
-    router.setParams({ deletedCard: undefined })
+    router.setParams({ archivedCard: undefined })
 
     // Remove from UI immediately and show undo
-    setItems((prev) => prev.filter((i) => cardIdOf(i) !== deletedId))
+    setItems((prev) => prev.filter((i) => cardIdOf(i) !== archivedId))
     setUndoItem(item)
     if (undoTimerRef.current) clearTimeout(undoTimerRef.current)
     undoTimerRef.current = setTimeout(() => {
       setUndoItem(null)
-      void api.cards.remove(deletedId)
+      void api.cards.archive(archivedId)
     }, 5000)
-  }, [params.deletedCard, items, router])
+  }, [params.archivedCard, items, router])
 
   function handleUndo() {
     if (!undoItem) return
     if (undoTimerRef.current) clearTimeout(undoTimerRef.current)
+    const id = cardIdOf(undoItem)
+    void api.cards.unarchive(id)
     setItems((prev) => {
-      if (prev.some((i) => cardIdOf(i) === cardIdOf(undoItem))) return prev
+      if (prev.some((i) => cardIdOf(i) === id)) return prev
       return [...prev, undoItem]
     })
     setUndoItem(null)
+  }
+
+  function enterSelectionMode(id: string) {
+    setSelectionMode(true)
+    setSelectedIds(new Set([id]))
+  }
+
+  function toggleSelection(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  function exitSelectionMode() {
+    setSelectionMode(false)
+    setSelectedIds(new Set())
+  }
+
+  async function archiveSelected() {
+    const ids = Array.from(selectedIds)
+    setItems((prev) => prev.filter((i) => !ids.includes(cardIdOf(i))))
+    exitSelectionMode()
+    await Promise.all(ids.map((id) => api.cards.archive(id).catch(() => {})))
+  }
+
+  async function shareSelected() {
+    const val = bulkShareIdentifier.trim()
+    if (!val) return
+    setBulkSharing(true)
+    setBulkShareError('')
+    try {
+      const ids = Array.from(selectedIds)
+      await Promise.all(ids.map((id) => api.shares.share(id, { identifier: val }).catch(() => {})))
+      setBulkShareOpen(false)
+      setBulkShareIdentifier('')
+      exitSelectionMode()
+    } catch (err) {
+      setBulkShareError(err instanceof ApiError ? err.message : 'Failed to share cards')
+    } finally {
+      setBulkSharing(false)
+    }
   }
 
   async function handleReorder(newItems: ListItem[]) {
@@ -351,6 +424,10 @@ export default function MyCardsScreen() {
             </TouchableOpacity>
           )}
         </View>
+        <TouchableOpacity style={styles.archivedLink} onPress={() => router.push('/(tabs)/my-cards/archived')}>
+          <Ionicons name="archive-outline" size={14} color={t.accent} />
+          <Text style={styles.archivedLinkText}>View archived cards</Text>
+        </TouchableOpacity>
       </View>
 
       {reorderMode ? (
@@ -396,11 +473,19 @@ export default function MyCardsScreen() {
           </View>
         }
         renderItem={({ item }) => {
-          if (item.kind === 'own') {
+          const id = cardIdOf(item)
+          const isOwn = item.kind === 'own'
+          if (isOwn) {
             return (
               <CardThumbnail
                 card={item.card}
-                onPress={() => router.push(`/(tabs)/my-cards/${item.card.id}`)}
+                selectionMode={selectionMode}
+                selected={selectedIds.has(id)}
+                onPress={() => {
+                  if (selectionMode) toggleSelection(id)
+                  else router.push(`/(tabs)/my-cards/${item.card.id}`)
+                }}
+                onLongPress={() => enterSelectionMode(id)}
               />
             )
           }
@@ -433,12 +518,63 @@ export default function MyCardsScreen() {
         </View>
       )}
 
-      <TouchableOpacity
-        style={styles.fab}
-        onPress={() => router.push('/(tabs)/my-cards/add')}
-      >
-        <Ionicons name="add" size={26} color="#fff" />
-      </TouchableOpacity>
+      {selectionMode ? (
+        <View style={styles.bulkBar}>
+          <Text style={styles.bulkCount}>{selectedIds.size} selected</Text>
+          <View style={styles.bulkActions}>
+            <TouchableOpacity style={[styles.bulkBtn, styles.bulkBtnShare]} onPress={() => setBulkShareOpen(true)}>
+              <Ionicons name="person-add-outline" size={16} color={t.accent} />
+              <Text style={styles.bulkBtnTextShare}>Share</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.bulkBtn, styles.bulkBtnArchive]} onPress={archiveSelected}>
+              <Ionicons name="archive-outline" size={16} color="#DC2626" />
+              <Text style={styles.bulkBtnTextArchive}>Archive</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={exitSelectionMode}>
+              <Ionicons name="close" size={22} color={t.textMuted} />
+            </TouchableOpacity>
+          </View>
+        </View>
+      ) : (
+        <TouchableOpacity
+          style={styles.fab}
+          onPress={() => router.push('/(tabs)/my-cards/add')}
+        >
+          <Ionicons name="add" size={26} color="#fff" />
+        </TouchableOpacity>
+      )}
+
+      <Modal visible={bulkShareOpen} transparent animationType="fade" onRequestClose={() => setBulkShareOpen(false)}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center', padding: 24 }}>
+          <View style={{ backgroundColor: t.surface, borderRadius: 16, padding: 20, width: '100%', maxWidth: 400, borderWidth: 1, borderColor: t.border }}>
+            <Text style={{ fontSize: 18, fontWeight: '700', color: t.text, marginBottom: 8 }}>Share {selectedIds.size} cards</Text>
+            <Text style={{ fontSize: 14, color: t.textMuted, marginBottom: 16 }}>Enter an email or username to share all selected cards.</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: t.bg, borderRadius: 12, borderWidth: 1, borderColor: t.border, paddingHorizontal: 12, paddingVertical: 10, marginBottom: 12 }}>
+              <Ionicons name="person-outline" size={18} color={t.textSubtle} style={{ marginRight: 8 }} />
+              <TextInput
+                style={{ flex: 1, fontSize: 15, color: t.text }}
+                placeholder="Email or username"
+                placeholderTextColor={t.textSubtle}
+                value={bulkShareIdentifier}
+                onChangeText={(v) => { setBulkShareIdentifier(v); setBulkShareError('') }}
+                autoCapitalize="none"
+                autoCorrect={false}
+                returnKeyType="send"
+                onSubmitEditing={shareSelected}
+              />
+            </View>
+            {bulkShareError ? <Text style={{ color: '#DC2626', fontSize: 13, marginBottom: 12 }}>{bulkShareError}</Text> : null}
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <TouchableOpacity style={{ flex: 1, paddingVertical: 12, borderRadius: 10, borderWidth: 1, borderColor: t.border, alignItems: 'center' }} onPress={() => setBulkShareOpen(false)}>
+                <Text style={{ fontSize: 15, fontWeight: '600', color: t.text }}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={{ flex: 1, paddingVertical: 12, borderRadius: 10, backgroundColor: t.accent, alignItems: 'center', opacity: bulkSharing || !bulkShareIdentifier.trim() ? 0.6 : 1 }} onPress={shareSelected} disabled={bulkSharing || !bulkShareIdentifier.trim()}>
+                {bulkSharing ? <Text style={{ fontSize: 15, fontWeight: '600', color: '#fff' }}>Sharing…</Text> : <Text style={{ fontSize: 15, fontWeight: '600', color: '#fff' }}>Share</Text>}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   )
 }

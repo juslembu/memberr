@@ -3,7 +3,7 @@ import { Stack } from 'expo-router'
 import { StatusBar } from 'expo-status-bar'
 import * as SplashScreen from 'expo-splash-screen'
 import * as Notifications from 'expo-notifications'
-import { Platform, StyleSheet, View, Text, TouchableOpacity, Linking } from 'react-native'
+import { Platform, StyleSheet, View, Text, TouchableOpacity, Linking, AppState } from 'react-native'
 import { ThemeProvider, DefaultTheme, DarkTheme } from '@react-navigation/native'
 import { Ionicons } from '@expo/vector-icons'
 import { AuthContext, useAuthState } from '../hooks/useAuth'
@@ -11,6 +11,7 @@ import { usePushNotifications } from '../hooks/usePushNotifications'
 import { useServiceWorker } from '../hooks/useServiceWorker'
 import { hasServerUrl } from '../lib/serverUrl'
 import { api, APP_VERSION } from '../lib/api'
+import { getBiometricEnabled, authenticateWithBiometric } from '../lib/biometric'
 import { AppThemeProvider, useTheme, useThemePref } from '../lib/ThemeContext'
 import type { Theme } from '../lib/theme'
 
@@ -111,6 +112,34 @@ function RootLayoutContent() {
 
   const [versionOk, setVersionOk] = useState<boolean | null>(Platform.OS === 'web' ? true : null)
   const [minVersion, setMinVersion] = useState('1.0.0')
+  const [biometricEnabled, setBiometricEnabled] = useState(false)
+  const [biometricLocked, setBiometricLocked] = useState(false)
+  const [biometricChecking, setBiometricChecking] = useState(false)
+
+  useEffect(() => {
+    if (Platform.OS === 'web') return
+    getBiometricEnabled().then(setBiometricEnabled)
+  }, [])
+
+  useEffect(() => {
+    if (Platform.OS === 'web' || !biometricEnabled) return
+    const handleAppState = (nextAppState: string) => {
+      if (nextAppState === 'active') {
+        setBiometricLocked(true)
+      }
+    }
+    setBiometricLocked(true)
+    const sub = AppState.addEventListener('change', handleAppState)
+    return () => sub.remove()
+  }, [biometricEnabled])
+
+  async function unlockWithBiometric() {
+    setBiometricChecking(true)
+    const success = await authenticateWithBiometric()
+    if (success) setBiometricLocked(false)
+    setBiometricChecking(false)
+  }
+
   useEffect(() => {
     if (Platform.OS === 'web' || serverConfigured === null) return
     if (!serverConfigured) {
@@ -130,8 +159,8 @@ function RootLayoutContent() {
   }, [serverConfigured])
 
   useEffect(() => {
-    if (!auth.loading && serverConfigured !== null && versionOk !== null) SplashScreen.hideAsync()
-  }, [auth.loading, serverConfigured, versionOk])
+    if (!auth.loading && serverConfigured !== null && versionOk !== null && !biometricChecking) SplashScreen.hideAsync()
+  }, [auth.loading, serverConfigured, versionOk, biometricChecking])
 
   if (auth.loading || serverConfigured === null || versionOk === null) return null
 
@@ -173,6 +202,25 @@ function RootLayoutContent() {
         </Stack>
       </ThemeProvider>
       <StatusBar style={mode === 'dark' ? 'light' : 'dark'} />
+
+      {biometricLocked && (
+        <View style={StyleSheet.absoluteFillObject} pointerEvents="auto">
+          <View style={[StyleSheet.absoluteFillObject, { backgroundColor: t.bg, justifyContent: 'center', alignItems: 'center', padding: 32, gap: 20 }]}>
+            <Ionicons name="lock-closed" size={56} color={t.accent} />
+            <Text style={{ fontSize: 22, fontWeight: '800', color: t.text }}>Locked</Text>
+            <Text style={{ fontSize: 15, color: t.textMuted, textAlign: 'center' }}>Unlock with biometric to continue</Text>
+            <TouchableOpacity
+              style={{ backgroundColor: t.accent, borderRadius: 12, paddingHorizontal: 32, paddingVertical: 14 }}
+              onPress={unlockWithBiometric}
+              disabled={biometricChecking}
+            >
+              <Text style={{ color: '#fff', fontSize: 15, fontWeight: '700' }}>
+                {biometricChecking ? 'Authenticating…' : 'Unlock'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
     </AuthContext.Provider>
   )
 }

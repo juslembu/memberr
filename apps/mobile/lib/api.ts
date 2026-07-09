@@ -259,6 +259,18 @@ export const api = {
     async remove(id: string): Promise<void> {
       await fetchWithAuth(`/api/v1/cards/${id}`, { method: 'DELETE' })
     },
+
+    async archive(id: string): Promise<void> {
+      await fetchWithAuth(`/api/v1/cards/${id}/archive`, { method: 'POST' })
+    },
+
+    async unarchive(id: string): Promise<void> {
+      await fetchWithAuth(`/api/v1/cards/${id}/unarchive`, { method: 'POST' })
+    },
+
+    async listArchived(): Promise<Card[]> {
+      return json<Card[]>(await fetchWithAuth('/api/v1/cards/archived'))
+    },
   },
 
   shares: {

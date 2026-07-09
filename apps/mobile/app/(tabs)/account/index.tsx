@@ -16,6 +16,7 @@ import { Ionicons } from '@expo/vector-icons'
 import { useAuth } from '../../../hooks/useAuth'
 import { api, ApiError, APP_VERSION } from '../../../lib/api'
 import { getServerUrl, clearServerUrl } from '../../../lib/serverUrl'
+import { isBiometricAvailable, getBiometricEnabled, setBiometricEnabled, authenticateWithBiometric } from '../../../lib/biometric'
 import { useTheme } from '../../../lib/ThemeContext'
 import { useThemePref, ThemePref } from '../../../lib/ThemeContext'
 import type { Theme } from '../../../lib/theme'
@@ -127,6 +128,14 @@ export default function AccountScreen() {
   const [serverUrl, setServerUrlState] = useState('')
   const [changeServerVisible, setChangeServerVisible] = useState(false)
   const [changingServer, setChangingServer] = useState(false)
+  const [biometricAvailable, setBiometricAvailable] = useState(false)
+  const [biometricEnabled, setBiometricEnabledState] = useState(false)
+
+  useEffect(() => {
+    if (Platform.OS === 'web') return
+    isBiometricAvailable().then(setBiometricAvailable)
+    getBiometricEnabled().then(setBiometricEnabledState)
+  }, [])
 
   useEffect(() => {
     if (Platform.OS !== 'web') getServerUrl().then(setServerUrlState)
@@ -138,6 +147,16 @@ export default function AccountScreen() {
     await clearServerUrl()
     setUser(null)
     router.replace('/server-setup')
+  }
+
+  async function toggleBiometric() {
+    const next = !biometricEnabled
+    if (next) {
+      const success = await authenticateWithBiometric('Confirm to enable biometric lock')
+      if (!success) return
+    }
+    await setBiometricEnabled(next)
+    setBiometricEnabledState(next)
   }
 
   // Edit profile modal
@@ -289,6 +308,14 @@ export default function AccountScreen() {
           <Ionicons name="chevron-forward" size={16} color={t.textSubtle} />
         </TouchableOpacity>
         <View style={styles.divider} />
+        {biometricAvailable && (
+          <TouchableOpacity style={[styles.actionRow, webCursor]} onPress={toggleBiometric}>
+            <Ionicons name="finger-print-outline" size={18} color={t.textMuted} style={styles.rowIcon} />
+            <Text style={styles.actionText}>Biometric lock</Text>
+            <Ionicons name={biometricEnabled ? 'checkbox' : 'square-outline'} size={22} color={biometricEnabled ? t.accent : t.textSubtle} />
+          </TouchableOpacity>
+        )}
+        {biometricAvailable && <View style={styles.divider} />}
         <View style={[styles.actionRow, { justifyContent: 'space-between' }]}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
             <Ionicons name="contrast-outline" size={18} color={t.textMuted} />

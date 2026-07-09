@@ -340,14 +340,14 @@ export default function CardDetailScreen() {
     await load()
   }
 
-  function handleDelete() {
+  function handleArchive() {
     setConfirmModal({
-      title: 'Delete card',
-      message: 'This will also remove access for anyone you shared it with.',
-      confirmLabel: 'Delete',
+      title: 'Archive card',
+      message: 'Archive this card? You can restore it later from Archived cards.',
+      confirmLabel: 'Archive',
       destructive: true,
       onConfirm: async () => {
-        router.replace({ pathname: '/(tabs)/my-cards', params: { deletedCard: id } })
+        router.replace({ pathname: '/(tabs)/my-cards', params: { archivedCard: id } })
       },
     })
   }
@@ -597,9 +597,9 @@ export default function CardDetailScreen() {
         })}
       </View>
 
-      <TouchableOpacity style={styles.deleteButton} onPress={() => { if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); handleDelete() }}>
-        <Ionicons name="trash-outline" size={18} color="#ef4444" />
-        <Text style={styles.deleteText}>Delete card</Text>
+      <TouchableOpacity style={styles.deleteButton} onPress={() => { if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); handleArchive() }}>
+        <Ionicons name="archive-outline" size={18} color="#ef4444" />
+        <Text style={styles.deleteText}>Archive card</Text>
       </TouchableOpacity>
 
       {/* Confirm modal */}

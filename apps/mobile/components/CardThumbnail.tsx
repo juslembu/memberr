@@ -9,8 +9,11 @@ import { BarcodeDisplay } from './BarcodeDisplay'
 interface Props {
   card: Card
   onPress?: () => void
+  onLongPress?: () => void
   sharedBy?: string
   shareExpiresAt?: string | null
+  selected?: boolean
+  selectionMode?: boolean
 }
 
 function daysUntil(dateStr: string | null | undefined): number | null {
@@ -70,10 +73,23 @@ function makeStyles(_t: Theme) {
       paddingVertical: 8, paddingHorizontal: 10, overflow: 'hidden',
     },
     number: { fontSize: 10, color: 'rgba(255,255,255,0.75)', letterSpacing: 1, fontWeight: '500', marginTop: 4 },
+    selectionOverlay: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: 'rgba(0,0,0,0.35)',
+      borderRadius: 14,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    selectionCircle: {
+      width: 28, height: 28, borderRadius: 14,
+      backgroundColor: '#fff',
+      justifyContent: 'center', alignItems: 'center',
+    },
+    selectionCircleSelected: { backgroundColor: '#0EA5E9' },
   })
 }
 
-export function CardThumbnail({ card, onPress, sharedBy, shareExpiresAt }: Props) {
+export function CardThumbnail({ card, onPress, onLongPress, sharedBy, shareExpiresAt, selected, selectionMode }: Props) {
   const t = useTheme()
   const styles = useMemo(() => makeStyles(t), [t])
   const [barcodeWidth, setBarcodeWidth] = useState(0)
@@ -89,7 +105,9 @@ export function CardThumbnail({ card, onPress, sharedBy, shareExpiresAt }: Props
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => [styles.card, { backgroundColor: bg }, pressed && styles.pressed]}
+      onLongPress={onLongPress}
+      delayLongPress={350}
+      style={({ pressed }) => [styles.card, { backgroundColor: bg }, pressed && styles.pressed, (selected || selectionMode) && { opacity: 0.9 }]}
     >
       {/* Decorative circles */}
       <View style={styles.circle1} />
@@ -150,6 +168,14 @@ export function CardThumbnail({ card, onPress, sharedBy, shareExpiresAt }: Props
 
       {/* Card number */}
       <Text style={styles.number} numberOfLines={1}>{card.cardNumber}</Text>
+
+      {selectionMode && (
+        <View style={styles.selectionOverlay}>
+          <View style={[styles.selectionCircle, selected && styles.selectionCircleSelected]}>
+            <Ionicons name={selected ? 'checkmark' : 'ellipse-outline'} size={16} color={selected ? '#fff' : '#0F172A'} />
+          </View>
+        </View>
+      )}
     </Pressable>
   )
 }

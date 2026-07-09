@@ -11,7 +11,7 @@ import {
   Platform,
   ScrollView,
 } from 'react-native'
-import { useRouter, useFocusEffect } from 'expo-router'
+import { useRouter, useFocusEffect, useLocalSearchParams } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { api, ApiError } from '../../../lib/api'
 import { CardThumbnail } from '../../../components/CardThumbnail'
@@ -25,6 +25,7 @@ type ListItem =
   | { kind: 'shared'; data: SharedCard }
 
 type Filter = 'all' | 'mine' | 'shared' | 'pinned'
+type Sort = 'custom' | 'name' | 'recent' | 'expiry'
 
 function cardIdOf(item: ListItem): string {
   return item.kind === 'own' ? item.card.id : item.data.card.id
@@ -32,6 +33,32 @@ function cardIdOf(item: ListItem): string {
 
 function isPinnedItem(item: ListItem): boolean {
   return item.kind === 'own' ? item.card.isPinned : item.data.isPinned
+}
+
+function cardOf(item: ListItem): Card | SharedCard['card'] {
+  return item.kind === 'own' ? item.card : item.data.card
+}
+
+function sortItems(items: ListItem[], sort: Sort): ListItem[] {
+  if (sort === 'custom') return items
+  const copy = [...items]
+  copy.sort((a, b) => {
+    const ca = cardOf(a)
+    const cb = cardOf(b)
+    if (sort === 'name') return ca.storeName.localeCompare(cb.storeName)
+    if (sort === 'recent') {
+      const da = new Date(ca.createdAt).getTime()
+      const db = new Date(cb.createdAt).getTime()
+      return db - da
+    }
+    if (sort === 'expiry') {
+      const ea = ca.expiresAt ? new Date(ca.expiresAt).getTime() : Infinity
+      const eb = cb.expiresAt ? new Date(cb.expiresAt).getTime() : Infinity
+      return ea - eb
+    }
+    return 0
+  })
+  return copy
 }
 
 function applyOrder(items: ListItem[], orderMap: Record<string, number>): ListItem[] {
@@ -134,6 +161,16 @@ function makeStyles(t: Theme) {
       backgroundColor: t.errorBg, borderRadius: 10, padding: 12,
     },
     errorText: { color: t.errorText, fontSize: 14, textAlign: 'center' },
+    undoBanner: {
+      position: 'absolute', bottom: 100, left: 16, right: 16,
+      backgroundColor: t.surface, borderRadius: 12, padding: 14,
+      borderWidth: 1, borderColor: t.border,
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+      shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 6,
+    },
+    undoText: { fontSize: 14, color: t.text, fontWeight: '500' },
+    undoBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+    undoBtnText: { fontSize: 14, color: t.accent, fontWeight: '700' },
     fab: {
       position: 'absolute', bottom: 24, right: 24, width: 54, height: 54, borderRadius: 27,
       backgroundColor: t.accent, justifyContent: 'center', alignItems: 'center',
@@ -148,13 +185,18 @@ export default function MyCardsScreen() {
   const t = useTheme()
   const styles = useMemo(() => makeStyles(t), [t])
   const router = useRouter()
+  const params = useLocalSearchParams<{ deletedCard?: string }>()
   const [items, setItems] = useState<ListItem[]>([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<Filter>('all')
+  const [sort, setSort] = useState<Sort>('custom')
   const [reorderMode, setReorderMode] = useState(false)
+  const [undoItem, setUndoItem] = useState<ListItem | null>(null)
+  const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const processedDeleteRef = useRef<string | null>(null)
 
   const load = useCallback(async (isRefresh = false) => {
     if (!isRefresh) setLoading(true)
@@ -180,6 +222,44 @@ export default function MyCardsScreen() {
 
   useFocusEffect(useCallback(() => { load() }, [load]))
 
+  useEffect(() => {
+    return () => {
+      if (undoTimerRef.current) clearTimeout(undoTimerRef.current)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!params.deletedCard) return
+    const deletedId = params.deletedCard
+    if (processedDeleteRef.current === deletedId) return
+    processedDeleteRef.current = deletedId
+
+    const item = items.find((i) => cardIdOf(i) === deletedId)
+    if (!item) return
+
+    // Clear the param so the effect doesn't re-run
+    router.setParams({ deletedCard: undefined })
+
+    // Remove from UI immediately and show undo
+    setItems((prev) => prev.filter((i) => cardIdOf(i) !== deletedId))
+    setUndoItem(item)
+    if (undoTimerRef.current) clearTimeout(undoTimerRef.current)
+    undoTimerRef.current = setTimeout(() => {
+      setUndoItem(null)
+      void api.cards.remove(deletedId)
+    }, 5000)
+  }, [params.deletedCard, items, router])
+
+  function handleUndo() {
+    if (!undoItem) return
+    if (undoTimerRef.current) clearTimeout(undoTimerRef.current)
+    setItems((prev) => {
+      if (prev.some((i) => cardIdOf(i) === cardIdOf(undoItem))) return prev
+      return [...prev, undoItem]
+    })
+    setUndoItem(null)
+  }
+
   async function handleReorder(newItems: ListItem[]) {
     setItems(newItems)
     try {
@@ -189,13 +269,16 @@ export default function MyCardsScreen() {
 
   const pinnedCount = items.filter(isPinnedItem).length
 
-  const filtered = items.filter((item) => {
-    if (filter === 'mine' && item.kind !== 'own') return false
-    if (filter === 'shared' && item.kind !== 'shared') return false
-    if (filter === 'pinned' && !isPinnedItem(item)) return false
-    const name = item.kind === 'own' ? item.card.storeName : item.data.card.storeName
-    return name.toLowerCase().includes(search.toLowerCase())
-  })
+  const filtered = sortItems(
+    items.filter((item) => {
+      if (filter === 'mine' && item.kind !== 'own') return false
+      if (filter === 'shared' && item.kind !== 'shared') return false
+      if (filter === 'pinned' && !isPinnedItem(item)) return false
+      const name = item.kind === 'own' ? item.card.storeName : item.data.card.storeName
+      return name.toLowerCase().includes(search.toLowerCase())
+    }),
+    sort,
+  )
 
   if (loading) return <SkeletonList />
 
@@ -221,7 +304,7 @@ export default function MyCardsScreen() {
             </TouchableOpacity>
           )}
         </View>
-        {/* Filter chips */}
+        {/* Filter and sort chips */}
         <View style={styles.filterRow}>
           {(['all', 'mine', 'shared', 'pinned'] as Filter[]).map((f) => {
             if (f === 'pinned' && pinnedCount === 0) return null
@@ -238,7 +321,24 @@ export default function MyCardsScreen() {
               </TouchableOpacity>
             )
           })}
-          {filter === 'all' && !search && items.length > 1 && (
+          {items.length > 1 && (
+            <TouchableOpacity
+              style={[styles.filterChip, sort !== 'custom' && styles.filterChipActive]}
+              onPress={() => {
+                const options: Sort[] = ['custom', 'name', 'recent', 'expiry']
+                const next = options[(options.indexOf(sort) + 1) % options.length]
+                setSort(next)
+                if (next !== 'custom') setReorderMode(false)
+              }}
+              disabled={reorderMode}
+            >
+              <Ionicons name="swap-vertical-outline" size={13} color={sort !== 'custom' ? t.accent : t.textMuted} style={{ marginRight: 4 }} />
+              <Text style={[styles.filterChipText, sort !== 'custom' && styles.filterChipTextActive]}>
+                {sort === 'custom' ? 'Sort' : sort === 'name' ? 'Name' : sort === 'recent' ? 'Recent' : 'Expiry'}
+              </Text>
+            </TouchableOpacity>
+          )}
+          {filter === 'all' && !search && sort === 'custom' && items.length > 1 && (
             <TouchableOpacity
               style={[styles.reorderChip, reorderMode && styles.reorderChipActive]}
               onPress={() => setReorderMode((v) => !v)}
@@ -319,6 +419,16 @@ export default function MyCardsScreen() {
       {error && (
         <View style={styles.errorBanner}>
           <Text style={styles.errorText}>{error}</Text>
+        </View>
+      )}
+
+      {undoItem && (
+        <View style={styles.undoBanner}>
+          <Text style={styles.undoText}>Card deleted</Text>
+          <TouchableOpacity style={styles.undoBtn} onPress={handleUndo}>
+            <Ionicons name="arrow-undo-outline" size={16} color={t.accent} />
+            <Text style={styles.undoBtnText}>Undo</Text>
+          </TouchableOpacity>
         </View>
       )}
 

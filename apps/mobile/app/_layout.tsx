@@ -141,6 +141,11 @@ function RootLayoutContent() {
   }
 
   useEffect(() => {
+    if (Platform.OS === 'web' || !biometricLocked || biometricChecking) return
+    void unlockWithBiometric()
+  }, [biometricLocked])
+
+  useEffect(() => {
     if (Platform.OS === 'web' || serverConfigured === null) return
     if (!serverConfigured) {
       setVersionOk(true)
@@ -210,14 +215,16 @@ function RootLayoutContent() {
             <Text style={{ fontSize: 22, fontWeight: '800', color: t.text }}>Locked</Text>
             <Text style={{ fontSize: 15, color: t.textMuted, textAlign: 'center' }}>Unlock with biometric to continue</Text>
             <TouchableOpacity
-              style={{ backgroundColor: t.accent, borderRadius: 12, paddingHorizontal: 32, paddingVertical: 14 }}
+              style={{ backgroundColor: t.accent, borderRadius: 50, width: 80, height: 80, justifyContent: 'center', alignItems: 'center' }}
               onPress={unlockWithBiometric}
               disabled={biometricChecking}
+              activeOpacity={0.8}
             >
-              <Text style={{ color: '#fff', fontSize: 15, fontWeight: '700' }}>
-                {biometricChecking ? 'Authenticating…' : 'Unlock'}
-              </Text>
+              <Ionicons name="finger-print-outline" size={40} color="#fff" />
             </TouchableOpacity>
+            {biometricChecking && (
+              <Text style={{ fontSize: 14, color: t.textMuted, marginTop: 8 }}>Authenticating…</Text>
+            )}
           </View>
         </View>
       )}

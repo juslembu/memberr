@@ -233,7 +233,6 @@ function RootLayoutContent() {
             <TouchableOpacity
               style={{ backgroundColor: t.accent, borderRadius: 50, width: 80, height: 80, justifyContent: 'center', alignItems: 'center' }}
               onPress={unlockWithBiometric}
-              disabled={biometricChecking}
               activeOpacity={0.8}
             >
               <Ionicons name="finger-print-outline" size={40} color="#fff" />

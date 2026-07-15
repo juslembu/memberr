@@ -115,6 +115,7 @@ function RootLayoutContent() {
   const [biometricEnabled, setBiometricEnabled] = useState(false)
   const [biometricLocked, setBiometricLocked] = useState(false)
   const [biometricChecking, setBiometricChecking] = useState(false)
+  const [biometricError, setBiometricError] = useState<string | null>(null)
 
   useEffect(() => {
     if (Platform.OS === 'web') return
@@ -134,15 +135,30 @@ function RootLayoutContent() {
   }, [biometricEnabled])
 
   async function unlockWithBiometric() {
+    if (biometricChecking) return
     setBiometricChecking(true)
-    const success = await authenticateWithBiometric()
-    if (success) setBiometricLocked(false)
-    setBiometricChecking(false)
+    setBiometricError(null)
+    try {
+      const success = await authenticateWithBiometric()
+      if (success) {
+        setBiometricLocked(false)
+      } else {
+        setBiometricError('Authentication cancelled')
+      }
+    } catch (err) {
+      console.error('Biometric authentication failed', err)
+      setBiometricError('Authentication failed. Try again.')
+    } finally {
+      setBiometricChecking(false)
+    }
   }
 
   useEffect(() => {
     if (Platform.OS === 'web' || !biometricLocked || biometricChecking) return
-    void unlockWithBiometric()
+    const timeout = setTimeout(() => {
+      void unlockWithBiometric()
+    }, 300)
+    return () => clearTimeout(timeout)
   }, [biometricLocked])
 
   useEffect(() => {
@@ -224,6 +240,9 @@ function RootLayoutContent() {
             </TouchableOpacity>
             {biometricChecking && (
               <Text style={{ fontSize: 14, color: t.textMuted, marginTop: 8 }}>Authenticating…</Text>
+            )}
+            {biometricError && !biometricChecking && (
+              <Text style={{ fontSize: 14, color: '#DC2626', marginTop: 8 }}>{biometricError}</Text>
             )}
           </View>
         </View>

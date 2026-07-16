@@ -235,16 +235,23 @@ export default function CardDetailScreen() {
     setLoading(true)
     setError(null)
     try {
-      const [cardData, shareData, pendingData, publicLinksData] = await Promise.all([
-        api.cards.get(id),
-        api.shares.list(id),
-        api.shares.listPending(id),
-        api.publicShares.list(id).catch(() => [] as PublicShare[]),
-      ])
+      const cardData = await api.cards.get(id)
       setCard(cardData)
-      setShares(shareData)
-      setPendingInvites(pendingData)
-      setPublicLinks(publicLinksData)
+
+      if (cardData.isActive) {
+        const [shareData, pendingData, publicLinksData] = await Promise.all([
+          api.shares.list(id),
+          api.shares.listPending(id),
+          api.publicShares.list(id).catch(() => [] as PublicShare[]),
+        ])
+        setShares(shareData)
+        setPendingInvites(pendingData)
+        setPublicLinks(publicLinksData)
+      } else {
+        setShares([])
+        setPendingInvites([])
+        setPublicLinks([])
+      }
     } catch {
       setError('Failed to load card')
     } finally {
@@ -474,14 +481,18 @@ export default function CardDetailScreen() {
             <Ionicons name="create-outline" size={18} color="#fff" />
             <Text style={styles.heroBtnText}>Edit</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.heroBtn} onPress={() => { if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setShowShareModal(true) }}>
-            <Ionicons name="person-add-outline" size={18} color="#fff" />
-            <Text style={styles.heroBtnText}>Share</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.heroBtn} onPress={() => { if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); openPublicModal() }}>
-            <Ionicons name="link-outline" size={18} color="#fff" />
-            <Text style={styles.heroBtnText}>Public link</Text>
-          </TouchableOpacity>
+          {card.isActive && (
+            <>
+              <TouchableOpacity style={styles.heroBtn} onPress={() => { if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setShowShareModal(true) }}>
+                <Ionicons name="person-add-outline" size={18} color="#fff" />
+                <Text style={styles.heroBtnText}>Share</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.heroBtn} onPress={() => { if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); openPublicModal() }}>
+                <Ionicons name="link-outline" size={18} color="#fff" />
+                <Text style={styles.heroBtnText}>Public link</Text>
+              </TouchableOpacity>
+            </>
+          )}
         </View>
       </View>
 
@@ -516,101 +527,105 @@ export default function CardDetailScreen() {
         </View>
       )}
 
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Shared with ({shares.length})</Text>
-        </View>
-        {shares.length === 0 && (
-          <Text style={styles.emptyShares}>Not shared with anyone yet</Text>
-        )}
-        {shares.map((share) => (
-          <View key={share.id} style={styles.shareRow}>
-            <View style={styles.shareAvatar}>
-              <Text style={styles.shareAvatarText}>
-                {(share.sharedWithUser?.displayName ?? share.sharedWithUser?.username ?? '?')[0].toUpperCase()}
-              </Text>
+      {card.isActive && (
+        <>
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Shared with ({shares.length})</Text>
             </View>
-            <View style={styles.shareInfo}>
-              <Text style={styles.shareName}>
-                {share.sharedWithUser?.displayName ?? share.sharedWithUser?.username}
-              </Text>
-              <Text style={styles.shareEmail}>{share.sharedWithUser?.email}</Text>
-            </View>
-            <TouchableOpacity onPress={() => handleRevoke(share.id, share.sharedWithUser?.username ?? 'user')}>
-              <Ionicons name="close-circle-outline" size={22} color="#ef4444" />
-            </TouchableOpacity>
-          </View>
-        ))}
-      </View>
-
-      {pendingInvites.length > 0 && (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Pending invitations ({pendingInvites.length})</Text>
-          {pendingInvites.map((inv) => (
-            <View key={inv.id} style={styles.pendingRow}>
-              <View style={styles.pendingIcon}>
-                <Ionicons name="mail-outline" size={16} color="#f97316" />
-              </View>
-              <View style={styles.shareInfo}>
-                <Text style={styles.shareName}>{inv.inviteeEmail}</Text>
-                <Text style={styles.shareEmail}>
-                  Invite expires {new Date(inv.expiresAt).toLocaleDateString()}
-                </Text>
-                {inv.shareExpiresAt ? (
-                  <Text style={styles.shareEmail}>
-                    Access until {new Date(inv.shareExpiresAt).toLocaleDateString()}
+            {shares.length === 0 && (
+              <Text style={styles.emptyShares}>Not shared with anyone yet</Text>
+            )}
+            {shares.map((share) => (
+              <View key={share.id} style={styles.shareRow}>
+                <View style={styles.shareAvatar}>
+                  <Text style={styles.shareAvatarText}>
+                    {(share.sharedWithUser?.displayName ?? share.sharedWithUser?.username ?? '?')[0].toUpperCase()}
                   </Text>
-                ) : null}
-              </View>
-              <View style={styles.pendingActions}>
-                {inv.token ? (
-                  <TouchableOpacity style={styles.linkBtn} onPress={() => copyInviteLink(inv.token!)}>
-                    <Ionicons name="link-outline" size={16} color={t.accent} />
-                  </TouchableOpacity>
-                ) : null}
-                <TouchableOpacity onPress={() => handleCancelInvite(inv.id)}>
+                </View>
+                <View style={styles.shareInfo}>
+                  <Text style={styles.shareName}>
+                    {share.sharedWithUser?.displayName ?? share.sharedWithUser?.username}
+                  </Text>
+                  <Text style={styles.shareEmail}>{share.sharedWithUser?.email}</Text>
+                </View>
+                <TouchableOpacity onPress={() => handleRevoke(share.id, share.sharedWithUser?.username ?? 'user')}>
                   <Ionicons name="close-circle-outline" size={22} color="#ef4444" />
                 </TouchableOpacity>
               </View>
-            </View>
-          ))}
-        </View>
-      )}
+            ))}
+          </View>
 
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Public links ({publicLinks.length})</Text>
-          <TouchableOpacity style={styles.addLinkBtn} onPress={openPublicModal}>
-            <Ionicons name="add" size={14} color={t.accent} />
-            <Text style={styles.addLinkBtnText}>New</Text>
-          </TouchableOpacity>
-        </View>
-        {publicLinks.length === 0 ? (
-          <Text style={styles.emptyShares}>No active public links</Text>
-        ) : null}
-        {publicLinks.map((pl) => {
-          const diffH = Math.ceil((new Date(pl.expiresAt).getTime() - Date.now()) / (1000 * 60 * 60))
-          const expiryStr = diffH < 24 ? `${diffH}h left` : `${Math.ceil(diffH / 24)}d left`
-          const copied = publicLinkCopied === pl.token
-          return (
-            <View key={pl.id} style={styles.publicLinkRow}>
-              <View style={styles.publicLinkIcon}>
-                <Ionicons name="link" size={16} color={t.accent} />
-              </View>
-              <View style={styles.shareInfo}>
-                <Text style={styles.shareName}>{pl.label ?? 'Public link'}</Text>
-                <Text style={styles.shareEmail}>Expires in {expiryStr}</Text>
-              </View>
-              <TouchableOpacity style={styles.linkBtn} onPress={() => copyPublicLink(pl.token)}>
-                <Ionicons name={copied ? 'checkmark' : 'copy-outline'} size={18} color={copied ? '#16A34A' : t.accent} />
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => handleRevokePublicLink(pl.id)}>
-                <Ionicons name="close-circle-outline" size={22} color="#ef4444" />
+          {pendingInvites.length > 0 && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Pending invitations ({pendingInvites.length})</Text>
+              {pendingInvites.map((inv) => (
+                <View key={inv.id} style={styles.pendingRow}>
+                  <View style={styles.pendingIcon}>
+                    <Ionicons name="mail-outline" size={16} color="#f97316" />
+                  </View>
+                  <View style={styles.shareInfo}>
+                    <Text style={styles.shareName}>{inv.inviteeEmail}</Text>
+                    <Text style={styles.shareEmail}>
+                      Invite expires {new Date(inv.expiresAt).toLocaleDateString()}
+                    </Text>
+                    {inv.shareExpiresAt ? (
+                      <Text style={styles.shareEmail}>
+                        Access until {new Date(inv.shareExpiresAt).toLocaleDateString()}
+                      </Text>
+                    ) : null}
+                  </View>
+                  <View style={styles.pendingActions}>
+                    {inv.token ? (
+                      <TouchableOpacity style={styles.linkBtn} onPress={() => copyInviteLink(inv.token!)}>
+                        <Ionicons name="link-outline" size={16} color={t.accent} />
+                      </TouchableOpacity>
+                    ) : null}
+                    <TouchableOpacity onPress={() => handleCancelInvite(inv.id)}>
+                      <Ionicons name="close-circle-outline" size={22} color="#ef4444" />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ))}
+            </View>
+          )}
+
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Public links ({publicLinks.length})</Text>
+              <TouchableOpacity style={styles.addLinkBtn} onPress={openPublicModal}>
+                <Ionicons name="add" size={14} color={t.accent} />
+                <Text style={styles.addLinkBtnText}>New</Text>
               </TouchableOpacity>
             </View>
-          )
-        })}
-      </View>
+            {publicLinks.length === 0 ? (
+              <Text style={styles.emptyShares}>No active public links</Text>
+            ) : null}
+            {publicLinks.map((pl) => {
+              const diffH = Math.ceil((new Date(pl.expiresAt).getTime() - Date.now()) / (1000 * 60 * 60))
+              const expiryStr = diffH < 24 ? `${diffH}h left` : `${Math.ceil(diffH / 24)}d left`
+              const copied = publicLinkCopied === pl.token
+              return (
+                <View key={pl.id} style={styles.publicLinkRow}>
+                  <View style={styles.publicLinkIcon}>
+                    <Ionicons name="link" size={16} color={t.accent} />
+                  </View>
+                  <View style={styles.shareInfo}>
+                    <Text style={styles.shareName}>{pl.label ?? 'Public link'}</Text>
+                    <Text style={styles.shareEmail}>Expires in {expiryStr}</Text>
+                  </View>
+                  <TouchableOpacity style={styles.linkBtn} onPress={() => copyPublicLink(pl.token)}>
+                    <Ionicons name={copied ? 'checkmark' : 'copy-outline'} size={18} color={copied ? '#16A34A' : t.accent} />
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => handleRevokePublicLink(pl.id)}>
+                    <Ionicons name="close-circle-outline" size={22} color="#ef4444" />
+                  </TouchableOpacity>
+                </View>
+              )
+            })}
+          </View>
+        </>
+      )}
 
       {card.isActive ? (
         <TouchableOpacity style={[styles.deleteButton, archiving && styles.buttonDisabled]} onPress={handleArchive} disabled={archiving}>

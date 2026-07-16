@@ -48,16 +48,21 @@ jobs:
             echo "$GOOGLE_SERVICES_JSON" > google-services.json
           fi
 
-      - name: Apply beta app name for prerelease tags
-        if: contains(github.ref_name, '-beta')
+      - name: Apply version and beta app name from tag
+        if: startsWith(github.ref, 'refs/tags/')
         working-directory: apps/mobile
         run: |
           node -e "
             const fs = require('fs');
+            const tag = process.env.GITHUB_REF_NAME;
+            const version = tag.startsWith('v') ? tag.slice(1) : tag;
             const cfg = JSON.parse(fs.readFileSync('app.json', 'utf8'));
-            cfg.expo.name = 'Memberr Beta';
+            cfg.expo.version = version;
+            if (tag.includes('-beta')) {
+              cfg.expo.name = 'Memberr Beta';
+            }
             fs.writeFileSync('app.json', JSON.stringify(cfg, null, 2) + '\n');
-            console.log('App name set to:', cfg.expo.name);
+            console.log('Tag:', tag, '→ version:', version, 'name:', cfg.expo.name);
           "
 
       - name: Prebuild native Android project

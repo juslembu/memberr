@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
-  Alert,
+  Platform,
 } from 'react-native'
 import { useRouter, useFocusEffect } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
@@ -32,6 +32,35 @@ function makeStyles(t: Theme) {
     emptyText: { fontSize: 18, fontWeight: '600', color: t.text },
     emptySubtext: { fontSize: 14, color: t.textSubtle, textAlign: 'center' },
     error: { color: t.errorText, textAlign: 'center', padding: 16 },
+    overlay: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: 'rgba(0,0,0,0.4)',
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: 24,
+      zIndex: 100,
+    },
+    dialog: {
+      backgroundColor: t.surface,
+      borderRadius: 16,
+      padding: 24,
+      width: '100%',
+      maxWidth: 400,
+    },
+    dialogTitle: { fontSize: 18, fontWeight: '700', color: t.text, marginBottom: 8 },
+    dialogMessage: { fontSize: 14, color: t.textMuted, marginBottom: 20, lineHeight: 20 },
+    dialogBtn: {
+      backgroundColor: t.accent,
+      borderRadius: 12,
+      paddingVertical: 12,
+      alignItems: 'center',
+      marginBottom: 10,
+    },
+    dialogBtnDestructive: { backgroundColor: '#DC2626' },
+    dialogBtnDisabled: { opacity: 0.6 },
+    dialogBtnText: { fontSize: 15, fontWeight: '600', color: '#fff' },
+    dialogCancel: { alignItems: 'center', paddingVertical: 8 },
+    dialogCancelText: { fontSize: 15, fontWeight: '600', color: t.textMuted },
   })
 }
 
@@ -43,6 +72,8 @@ export default function ArchivedCardsScreen() {
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [deleteId, setDeleteId] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
   const load = useCallback(async (isRefresh = false) => {
     if (!isRefresh) setLoading(true)
@@ -65,30 +96,26 @@ export default function ArchivedCardsScreen() {
       await api.cards.unarchive(id)
       setCards((prev) => prev.filter((c) => c.id !== id))
     } catch (err) {
-      Alert.alert('Error', err instanceof ApiError ? err.message : 'Failed to restore card')
+      setError(err instanceof ApiError ? err.message : 'Failed to restore card')
     }
   }
 
-  async function handlePermanentDelete(id: string) {
-    Alert.alert(
-      'Delete permanently?',
-      'This cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await api.cards.remove(id)
-              setCards((prev) => prev.filter((c) => c.id !== id))
-            } catch (err) {
-              Alert.alert('Error', err instanceof ApiError ? err.message : 'Failed to delete card')
-            }
-          },
-        },
-      ]
-    )
+  function confirmDelete(id: string) {
+    setDeleteId(id)
+  }
+
+  async function executeDelete() {
+    if (!deleteId) return
+    setDeleting(true)
+    try {
+      await api.cards.remove(deleteId)
+      setCards((prev) => prev.filter((c) => c.id !== deleteId))
+      setDeleteId(null)
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Failed to delete card')
+    } finally {
+      setDeleting(false)
+    }
   }
 
   if (loading) {
@@ -142,7 +169,7 @@ export default function ArchivedCardsScreen() {
               </TouchableOpacity>
               <TouchableOpacity
                 style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, backgroundColor: '#FEF2F2', borderRadius: 8, paddingHorizontal: 12 }}
-                onPress={() => handlePermanentDelete(item.id)}
+                onPress={() => confirmDelete(item.id)}
               >
                 <Ionicons name="trash-outline" size={14} color="#DC2626" />
               </TouchableOpacity>
@@ -150,6 +177,29 @@ export default function ArchivedCardsScreen() {
           </View>
         )}
       />
+
+      {deleteId && (
+        <View style={[styles.overlay, Platform.OS === 'web' ? { position: 'fixed' } : {}]}>
+          <View style={styles.dialog}>
+            <Text style={styles.dialogTitle}>Delete permanently?</Text>
+            <Text style={styles.dialogMessage}>This cannot be undone.</Text>
+            <TouchableOpacity
+              style={[styles.dialogBtn, styles.dialogBtnDestructive, deleting && styles.dialogBtnDisabled]}
+              onPress={executeDelete}
+              disabled={deleting}
+            >
+              {deleting ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Text style={styles.dialogBtnText}>Delete</Text>
+              )}
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.dialogCancel} onPress={() => setDeleteId(null)} disabled={deleting}>
+              <Text style={styles.dialogCancelText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
     </View>
   )
 }

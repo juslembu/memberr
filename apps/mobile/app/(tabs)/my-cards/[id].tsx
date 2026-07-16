@@ -189,6 +189,7 @@ export default function CardDetailScreen() {
   const [shares, setShares] = useState<CardShare[]>([])
   const [pendingInvites, setPendingInvites] = useState<Invitation[]>([])
   const [loading, setLoading] = useState(true)
+  const [archiving, setArchiving] = useState(false)
   const [shareIdentifier, setShareIdentifier] = useState('')
   const [shareDuration, setShareDuration] = useState<string | null>(null)
   const [showBarcodeModal, setShowBarcodeModal] = useState(false)
@@ -340,17 +341,16 @@ export default function CardDetailScreen() {
     await load()
   }
 
-  function handleArchive() {
-    setConfirmModal({
-      title: 'Archive card',
-      message: 'Archive this card? You can restore it later from Archived cards.',
-      confirmLabel: 'Archive',
-      destructive: true,
-      onConfirm: async () => {
-        setConfirmModal(null)
-        router.replace({ pathname: '/(tabs)/my-cards', params: { archivedCard: id } })
-      },
-    })
+  async function handleArchive() {
+    setArchiving(true)
+    try {
+      await api.cards.archive(id)
+      router.replace('/(tabs)/my-cards')
+    } catch {
+      // stay on screen so user can retry
+    } finally {
+      setArchiving(false)
+    }
   }
 
   function handleRestore() {
@@ -613,9 +613,9 @@ export default function CardDetailScreen() {
       </View>
 
       {card.isActive ? (
-        <TouchableOpacity style={styles.deleteButton} onPress={() => { if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); handleArchive() }}>
-          <Ionicons name="archive-outline" size={18} color="#ef4444" />
-          <Text style={styles.deleteText}>Archive card</Text>
+        <TouchableOpacity style={[styles.deleteButton, archiving && styles.buttonDisabled]} onPress={handleArchive} disabled={archiving}>
+          {archiving ? <ActivityIndicator size="small" color="#ef4444" style={{ marginRight: 8 }} /> : <Ionicons name="archive-outline" size={18} color="#ef4444" />}
+          <Text style={styles.deleteText}>{archiving ? 'Archiving…' : 'Archive card'}</Text>
         </TouchableOpacity>
       ) : (
         <TouchableOpacity style={styles.deleteButton} onPress={() => { if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); handleRestore() }}>
@@ -870,7 +870,7 @@ export default function CardDetailScreen() {
     </ScrollView>
 
     {confirmModal && (
-      <View style={[StyleSheet.absoluteFillObject, { zIndex: 100, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center', padding: 24 }]}>
+      <View style={[StyleSheet.absoluteFillObject, Platform.OS === 'web' ? { position: 'fixed' } : {}, { zIndex: 100, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center', padding: 24 }]}>
         <View style={[styles.modalContent, styles.confirmContent, { backgroundColor: t.surface }]}>
           <Text style={styles.modalTitle}>{confirmModal.title}</Text>
           <Text style={styles.confirmMessage}>{confirmModal.message}</Text>

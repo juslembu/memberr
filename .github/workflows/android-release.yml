@@ -48,6 +48,18 @@ jobs:
             echo "$GOOGLE_SERVICES_JSON" > google-services.json
           fi
 
+      - name: Apply beta app name for prerelease tags
+        if: contains(github.ref_name, '-beta')
+        working-directory: apps/mobile
+        run: |
+          node -e "
+            const fs = require('fs');
+            const cfg = JSON.parse(fs.readFileSync('app.json', 'utf8'));
+            cfg.expo.name = 'Memberr Beta';
+            fs.writeFileSync('app.json', JSON.stringify(cfg, null, 2) + '\n');
+            console.log('App name set to:', cfg.expo.name);
+          "
+
       - name: Prebuild native Android project
         working-directory: apps/mobile
         run: CI=1 pnpm exec expo prebuild --platform android --no-install

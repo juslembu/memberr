@@ -347,6 +347,7 @@ export default function CardDetailScreen() {
       confirmLabel: 'Archive',
       destructive: true,
       onConfirm: async () => {
+        setConfirmModal(null)
         router.replace({ pathname: '/(tabs)/my-cards', params: { archivedCard: id } })
       },
     })
@@ -358,6 +359,7 @@ export default function CardDetailScreen() {
       message: 'Restore this card to your active cards?',
       confirmLabel: 'Restore',
       onConfirm: async () => {
+        setConfirmModal(null)
         await api.cards.unarchive(id).catch(() => {})
         router.replace('/(tabs)/my-cards')
       },
@@ -429,7 +431,8 @@ export default function CardDetailScreen() {
   const isExpired = expDays !== null && expDays < 0
 
   return (
-    <ScrollView style={styles.container}>
+    <View style={{ flex: 1 }}>
+      <ScrollView style={styles.container}>
       {error && (
         <View style={styles.errorBanner}>
           <Text style={styles.errorText}>{error}</Text>
@@ -620,26 +623,6 @@ export default function CardDetailScreen() {
           <Text style={[styles.deleteText, { color: '#16A34A' }]}>Restore card</Text>
         </TouchableOpacity>
       )}
-
-      {/* Confirm modal */}
-      <Modal visible={!!confirmModal} animationType="fade" transparent>
-        <View style={[styles.modalOverlay, styles.confirmOverlay]}>
-          <View style={[styles.modalContent, styles.confirmContent]}>
-            <Text style={styles.modalTitle}>{confirmModal?.title}</Text>
-            <Text style={styles.confirmMessage}>{confirmModal?.message}</Text>
-            <TouchableOpacity
-              style={[styles.modalButton, confirmModal?.destructive && styles.destructiveButton, confirmRunning && styles.buttonDisabled]}
-              onPress={runConfirm}
-              disabled={confirmRunning}
-            >
-              <Text style={styles.modalButtonText}>{confirmRunning ? 'Please wait…' : confirmModal?.confirmLabel}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => setConfirmModal(null)} style={styles.modalCancel} disabled={confirmRunning}>
-              <Text style={styles.modalCancelText}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
 
       {/* Public link creation modal */}
       <Modal
@@ -884,15 +867,36 @@ export default function CardDetailScreen() {
         </KeyboardAvoidingView>
       </Modal>
 
-      {card && (
-        <BarcodeScanModal
-          visible={showBarcodeModal}
-          value={card.cardNumber}
-          type={card.barcodeType as BarcodeType}
-          storeName={card.storeName}
-          onClose={() => setShowBarcodeModal(false)}
-        />
-      )}
     </ScrollView>
+
+    {confirmModal && (
+      <View style={[StyleSheet.absoluteFillObject, { zIndex: 100, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center', padding: 24 }]}>
+        <View style={[styles.modalContent, styles.confirmContent, { backgroundColor: t.surface }]}>
+          <Text style={styles.modalTitle}>{confirmModal.title}</Text>
+          <Text style={styles.confirmMessage}>{confirmModal.message}</Text>
+          <TouchableOpacity
+            style={[styles.modalButton, confirmModal.destructive && styles.destructiveButton, confirmRunning && styles.buttonDisabled]}
+            onPress={runConfirm}
+            disabled={confirmRunning}
+          >
+            <Text style={styles.modalButtonText}>{confirmRunning ? 'Please wait…' : confirmModal.confirmLabel}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setConfirmModal(null)} style={styles.modalCancel} disabled={confirmRunning}>
+            <Text style={styles.modalCancelText}>Cancel</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    )}
+
+    {card && (
+      <BarcodeScanModal
+        visible={showBarcodeModal}
+        value={card.cardNumber}
+        type={card.barcodeType as BarcodeType}
+        storeName={card.storeName}
+        onClose={() => setShowBarcodeModal(false)}
+      />
+    )}
+  </View>
   )
 }

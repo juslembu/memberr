@@ -251,12 +251,6 @@ export default function MyCardsScreen() {
   useFocusEffect(useCallback(() => { load() }, [load]))
 
   useEffect(() => {
-    return () => {
-      if (undoTimerRef.current) clearTimeout(undoTimerRef.current)
-    }
-  }, [])
-
-  useEffect(() => {
     if (!params.archivedCard) {
       lastArchivedRef.current = null
       return
@@ -274,13 +268,13 @@ export default function MyCardsScreen() {
     // Clear the param so the effect doesn't re-run
     router.setParams({ archivedCard: undefined })
 
-    // Remove from UI immediately and show undo
+    // Remove from UI immediately, archive on the server, and show undo
     setItems((prev) => prev.filter((i) => cardIdOf(i) !== archivedId))
     setUndoItem(item)
+    void api.cards.archive(archivedId)
     if (undoTimerRef.current) clearTimeout(undoTimerRef.current)
     undoTimerRef.current = setTimeout(() => {
       setUndoItem(null)
-      void api.cards.archive(archivedId)
     }, 5000)
   }, [params.archivedCard, items, router])
 

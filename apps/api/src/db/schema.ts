@@ -9,21 +9,28 @@ import {
   index,
   primaryKey,
 } from 'drizzle-orm/pg-core'
-import { relations } from 'drizzle-orm'
+import { relations, sql } from 'drizzle-orm'
 
-export const users = pgTable('users', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  email: text('email').unique().notNull(),
-  username: text('username').unique().notNull(),
-  passwordHash: text('password_hash').notNull(),
-  displayName: text('display_name'),
-  avatarUrl: text('avatar_url'),
-  isAdmin: boolean('is_admin').default(false).notNull(),
-  mustChangePassword: boolean('must_change_password').default(false).notNull(),
-  pushToken: text('push_token'),
-  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
-})
+export const users = pgTable(
+  'users',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    email: text('email').unique().notNull(),
+    username: text('username').unique().notNull(),
+    passwordHash: text('password_hash').notNull(),
+    displayName: text('display_name'),
+    avatarUrl: text('avatar_url'),
+    isAdmin: boolean('is_admin').default(false).notNull(),
+    mustChangePassword: boolean('must_change_password').default(false).notNull(),
+    pushToken: text('push_token'),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [
+    uniqueIndex('users_email_lower_idx').on(sql`lower(${t.email})`),
+    uniqueIndex('users_username_lower_idx').on(sql`lower(${t.username})`),
+  ],
+)
 
 export const predefinedShops = pgTable('predefined_shops', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -33,37 +40,48 @@ export const predefinedShops = pgTable('predefined_shops', {
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 })
 
-export const refreshTokens = pgTable('refresh_tokens', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  userId: uuid('user_id')
-    .notNull()
-    .references(() => users.id, { onDelete: 'cascade' }),
-  tokenHash: text('token_hash').notNull(),
-  deviceLabel: text('device_label'),
-  familyId: uuid('family_id').notNull(),
-  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
-  revokedAt: timestamp('revoked_at', { withTimezone: true }),
-  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-})
+export const refreshTokens = pgTable(
+  'refresh_tokens',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    tokenHash: text('token_hash').notNull(),
+    deviceLabel: text('device_label'),
+    familyId: uuid('family_id').notNull(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    revokedAt: timestamp('revoked_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [
+    index('refresh_tokens_token_hash_idx').on(t.tokenHash),
+    index('refresh_tokens_family_idx').on(t.familyId),
+  ],
+)
 
-export const cards = pgTable('cards', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  ownerId: uuid('owner_id')
-    .notNull()
-    .references(() => users.id, { onDelete: 'cascade' }),
-  storeName: text('store_name').notNull(),
-  cardNumber: text('card_number').notNull(),
-  barcodeType: text('barcode_type').notNull(),
-  notes: text('notes'),
-  color: text('color'),
-  logoUrl: text('logo_url'),
-  cardImageUrl: text('card_image_url'),
-  isPinned: boolean('is_pinned').default(false).notNull(),
-  expiresAt: timestamp('expires_at', { withTimezone: true }),
-  isActive: boolean('is_active').default(true).notNull(),
-  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
-})
+export const cards = pgTable(
+  'cards',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    ownerId: uuid('owner_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    storeName: text('store_name').notNull(),
+    cardNumber: text('card_number').notNull(),
+    barcodeType: text('barcode_type').notNull(),
+    notes: text('notes'),
+    color: text('color'),
+    logoUrl: text('logo_url'),
+    cardImageUrl: text('card_image_url'),
+    isPinned: boolean('is_pinned').default(false).notNull(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }),
+    isActive: boolean('is_active').default(true).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [index('cards_owner_active_idx').on(t.ownerId, t.isActive)],
+)
 
 export const cardShares = pgTable(
   'card_shares',
@@ -82,7 +100,10 @@ export const cardShares = pgTable(
     revokedAt: timestamp('revoked_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   },
-  (t) => [uniqueIndex('card_shares_card_user_idx').on(t.cardId, t.sharedWith)],
+  (t) => [
+    uniqueIndex('card_shares_card_user_idx').on(t.cardId, t.sharedWith),
+    index('card_shares_shared_with_idx').on(t.sharedWith),
+  ],
 )
 
 export const invitations = pgTable(
@@ -104,19 +125,27 @@ export const invitations = pgTable(
     respondedAt: timestamp('responded_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   },
-  (t) => [index('invitations_token_idx').on(t.token)],
+  (t) => [
+    index('invitations_token_idx').on(t.token),
+    index('invitations_invitee_email_status_idx').on(t.inviteeEmail, t.status),
+    index('invitations_invited_by_idx').on(t.invitedBy),
+  ],
 )
 
-export const publicShares = pgTable('public_shares', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  cardId: uuid('card_id').notNull().references(() => cards.id, { onDelete: 'cascade' }),
-  ownerId: uuid('owner_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
-  token: text('token').unique().notNull(),
-  label: text('label'),
-  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
-  revokedAt: timestamp('revoked_at', { withTimezone: true }),
-  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-})
+export const publicShares = pgTable(
+  'public_shares',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    cardId: uuid('card_id').notNull().references(() => cards.id, { onDelete: 'cascade' }),
+    ownerId: uuid('owner_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    token: text('token').unique().notNull(),
+    label: text('label'),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    revokedAt: timestamp('revoked_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [index('public_shares_card_idx').on(t.cardId)],
+)
 
 // Per-recipient pin state for shared cards. Separate from cards.isPinned
 // (the owner's pin) so each recipient can organise their own shared-with-me list.

@@ -71,6 +71,13 @@
       "when": 1782200000000,
       "tag": "0009_server_settings",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1784186597999,
+      "tag": "0010_aberrant_quicksilver",
+      "breakpoints": true
     }
   ]
 }

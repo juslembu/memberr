@@ -2,8 +2,8 @@ import { FastifyInstance } from 'fastify'
 import { randomBytes } from 'crypto'
 import * as argon2 from 'argon2'
 import { db } from '../db/client.js'
-import { users, predefinedShops, serverSettings } from '../db/schema.js'
-import { eq, ne, asc } from 'drizzle-orm'
+import { users, predefinedShops, serverSettings, cards } from '../db/schema.js'
+import { eq, ne, asc, count } from 'drizzle-orm'
 import { createShopSchema, adminResetPasswordSchema } from '@memberr/shared'
 import { setSetting } from '../lib/settings.js'
 
@@ -95,11 +95,22 @@ export default async function adminRoutes(app: FastifyInstance) {
 
   app.delete('/shops/:id', async (request, reply) => {
     const { id } = request.params as { id: string }
-    const [shop] = await db
-      .delete(predefinedShops)
-      .where(eq(predefinedShops.id, id))
-      .returning({ id: predefinedShops.id })
+
+    const [shop] = await db.select({ name: predefinedShops.name }).from(predefinedShops).where(eq(predefinedShops.id, id)).limit(1)
     if (!shop) return reply.code(404).send({ error: 'Shop not found' })
+
+    const [{ value: cardCount }] = await db
+      .select({ value: count() })
+      .from(cards)
+      .where(eq(cards.storeName, shop.name))
+
+    if (cardCount > 0) {
+      return reply.code(400).send({
+        error: `Cannot delete: ${cardCount} card${cardCount === 1 ? '' : 's'} ${cardCount === 1 ? 'is' : 'are'} using this shop.`,
+      })
+    }
+
+    await db.delete(predefinedShops).where(eq(predefinedShops.id, id))
     return { ok: true }
   })
 

@@ -1,7 +1,7 @@
 import { FastifyInstance } from 'fastify'
 import { db } from '../db/client.js'
 import { cards, cardShares, invitations, users } from '../db/schema.js'
-import { eq, and, isNull, gt, or } from 'drizzle-orm'
+import { eq, and, isNull, gt, or, sql } from 'drizzle-orm'
 import { shareCardSchema } from '@memberr/shared'
 import { z } from 'zod'
 import { nanoid } from 'nanoid'
@@ -93,14 +93,18 @@ export default async function shareRoutes(app: FastifyInstance) {
       .where(eq(users.id, request.userId))
       .limit(1)
 
-    if (self?.email === identifier || self?.username === identifier) {
+    const lowerIdentifier = identifier.toLowerCase()
+    if (self?.email?.toLowerCase() === lowerIdentifier || self?.username?.toLowerCase() === lowerIdentifier) {
       return reply.code(400).send({ error: 'Cannot share with yourself' })
     }
 
     const [inviteeUser] = await db
       .select({ id: users.id, email: users.email, username: users.username, pushToken: users.pushToken })
       .from(users)
-      .where(or(eq(users.email, identifier), eq(users.username, identifier)))
+      .where(or(
+        eq(sql`lower(${users.email})`, lowerIdentifier),
+        eq(sql`lower(${users.username})`, lowerIdentifier),
+      ))
       .limit(1)
 
     if (!inviteeUser) {

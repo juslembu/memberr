@@ -1,7 +1,7 @@
 import { FastifyInstance } from 'fastify'
 import { db } from '../db/client.js'
 import { users } from '../db/schema.js'
-import { eq, or } from 'drizzle-orm'
+import { eq, or, sql } from 'drizzle-orm'
 import * as argon2 from 'argon2'
 import { registerSchema, loginSchema, changePasswordSchema, updateProfileSchema } from '@memberr/shared'
 import { authRouteHelpers } from '../plugins/auth.js'
@@ -40,10 +40,12 @@ export default async function authRoutes(app: FastifyInstance) {
 
       const { email, username, password, displayName } = body.data
 
+      const normalizedEmail = email.toLowerCase()
+
       const [existing] = await db
         .select({ id: users.id })
         .from(users)
-        .where(eq(users.email, email))
+        .where(eq(sql`lower(${users.email})`, normalizedEmail))
         .limit(1)
 
       if (existing) return reply.code(409).send({ error: 'Email already registered' })
@@ -51,7 +53,7 @@ export default async function authRoutes(app: FastifyInstance) {
       const [existingUsername] = await db
         .select({ id: users.id })
         .from(users)
-        .where(eq(users.username, username))
+        .where(eq(sql`lower(${users.username})`, username.toLowerCase()))
         .limit(1)
 
       if (existingUsername) return reply.code(409).send({ error: 'Username already taken' })
@@ -61,7 +63,7 @@ export default async function authRoutes(app: FastifyInstance) {
       try {
         inserted = await db
           .insert(users)
-          .values({ email, username, passwordHash, displayName: displayName ?? null })
+          .values({ email: normalizedEmail, username, passwordHash, displayName: displayName ?? null })
           .returning(USER_FIELDS)
       } catch (err) {
         // Pre-checks above aren't atomic with this insert, so a concurrent registration with the
@@ -98,10 +100,14 @@ export default async function authRoutes(app: FastifyInstance) {
       if (!body.success) return reply.code(400).send({ error: body.error.flatten() })
 
       const { identifier, password } = body.data
+      const lowerId = identifier.toLowerCase()
       const [user] = await db
         .select()
         .from(users)
-        .where(or(eq(users.email, identifier), eq(users.username, identifier)))
+        .where(or(
+          eq(sql`lower(${users.email})`, lowerId),
+          eq(sql`lower(${users.username})`, lowerId),
+        ))
         .limit(1)
 
       if (!user || !(await argon2.verify(user.passwordHash, password))) {
@@ -217,7 +223,7 @@ export default async function authRoutes(app: FastifyInstance) {
       const [existing] = await db
         .select({ id: users.id })
         .from(users)
-        .where(eq(users.username, username))
+        .where(eq(sql`lower(${users.username})`, username.toLowerCase()))
         .limit(1)
       if (existing && existing.id !== request.userId) {
         return reply.code(409).send({ error: 'Username already taken' })
@@ -228,7 +234,7 @@ export default async function authRoutes(app: FastifyInstance) {
       const [existing] = await db
         .select({ id: users.id })
         .from(users)
-        .where(eq(users.email, email))
+        .where(eq(sql`lower(${users.email})`, email.toLowerCase()))
         .limit(1)
       if (existing && existing.id !== request.userId) {
         return reply.code(409).send({ error: 'Email already in use' })
@@ -238,7 +244,7 @@ export default async function authRoutes(app: FastifyInstance) {
     const updates: Record<string, unknown> = { updatedAt: new Date() }
     if (displayName !== undefined) updates.displayName = displayName
     if (username) updates.username = username
-    if (email) updates.email = email
+    if (email) updates.email = email.toLowerCase()
 
     const [updated] = await db
       .select(USER_FIELDS)

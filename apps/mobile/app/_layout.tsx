@@ -116,6 +116,7 @@ function RootLayoutContent() {
   const [biometricLocked, setBiometricLocked] = useState(false)
   const [biometricChecking, setBiometricChecking] = useState(false)
   const [biometricError, setBiometricError] = useState<string | null>(null)
+  const [splashHidden, setSplashHidden] = useState(false)
 
   useEffect(() => {
     if (Platform.OS === 'web') return
@@ -154,12 +155,12 @@ function RootLayoutContent() {
   }
 
   useEffect(() => {
-    if (Platform.OS === 'web' || !biometricLocked || biometricChecking) return
+    if (Platform.OS === 'web' || !biometricLocked || biometricChecking || !splashHidden) return
     const timeout = setTimeout(() => {
       void unlockWithBiometric()
     }, 300)
     return () => clearTimeout(timeout)
-  }, [biometricLocked])
+  }, [biometricLocked, splashHidden])
 
   useEffect(() => {
     if (Platform.OS === 'web' || serverConfigured === null) return
@@ -180,7 +181,9 @@ function RootLayoutContent() {
   }, [serverConfigured])
 
   useEffect(() => {
-    if (!auth.loading && serverConfigured !== null && versionOk !== null && !biometricChecking) SplashScreen.hideAsync()
+    if (!auth.loading && serverConfigured !== null && versionOk !== null && !biometricChecking) {
+      SplashScreen.hideAsync().then(() => setSplashHidden(true))
+    }
   }, [auth.loading, serverConfigured, versionOk, biometricChecking])
 
   if (auth.loading || serverConfigured === null || versionOk === null) return null

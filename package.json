@@ -7,6 +7,7 @@
     "dev": "turbo dev",
     "lint": "turbo lint",
     "type-check": "turbo type-check",
+    "test": "turbo test",
     "db:migrate": "pnpm --filter @memberr/api db:migrate",
     "db:generate": "pnpm --filter @memberr/api db:generate",
     "version:sync": "node scripts/sync-version.mjs",

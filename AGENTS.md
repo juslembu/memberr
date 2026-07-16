@@ -18,6 +18,7 @@ pnpm --filter @memberr/api dev   # API on http://localhost:3000
 pnpm --filter @memberr/mobile dev        # Expo (w=web, a=Android, i=iOS)
 pnpm --filter @memberr/mobile lint       # lint only
 pnpm type-check                          # type-check both apps
+pnpm test                                # run tests across all packages (Vitest)
 ```
 
 ### Database changes
@@ -69,6 +70,21 @@ The mobile app is also the web SPA (`app.json` has `"output": "single"`).
 - Only sets `Content-Type: application/json` when a body is present; omitting it on bodyless GET/DELETE avoids Fastify 400s.
 - Sends `X-App-Version` header on every request.
 - Handles 401 → refresh-token retry automatically.
+
+## Testing
+
+Vitest is the test runner, wired through Turborepo (`pnpm test` runs all packages). Tests are devDependencies and are not included in the Docker production image (`--prod` install).
+
+```bash
+pnpm test                                    # all tests (via turbo)
+pnpm --filter @memberr/shared test           # shared Zod schema tests only
+pnpm --filter @memberr/shared test:watch     # watch mode
+pnpm --filter @memberr/api test              # API tests only
+```
+
+- `packages/shared/src/validation/__tests__/validation.test.ts` — all Zod schema edge cases.
+- `apps/api/src/plugins/__tests__/auth.test.ts` — auth helpers (token hashing, JWT signing, refresh token rotation, reuse detection). Mocks the DB layer so no Postgres needed.
+- Tests also run in CI via `.github/workflows/test.yml` on push to `main` and on PRs.
 
 ## Deployment gotchas
 

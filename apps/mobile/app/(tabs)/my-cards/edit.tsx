@@ -116,7 +116,9 @@ export default function EditCardScreen() {
   const [shopInputFocused, setShopInputFocused] = useState(false)
 
   useFocusEffect(useCallback(() => {
-    api.shops.list().then(setPredefinedShops).catch(() => {})
+    api.shops.list().then(setPredefinedShops).catch((err) => {
+      console.error('Failed to load predefined shops', err)
+    })
     api.cards.get(id).then((c) => {
       setCard(c)
       setStoreName(c.storeName)

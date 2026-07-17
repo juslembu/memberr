@@ -21,11 +21,15 @@ export function BarcodeScanModal({ visible, value, type, storeName, onClose }: P
 
     Brightness.getBrightnessAsync()
       .then((b) => { originalBrightness = b; return Brightness.setBrightnessAsync(1.0) })
-      .catch(() => {})
-    activateKeepAwakeAsync('barcode-scan').catch(() => {})
+      .catch((err) => { console.error('Failed to set brightness for barcode scan', err) })
+    activateKeepAwakeAsync('barcode-scan').catch((err) => {
+      console.error('Failed to activate keep awake for barcode scan', err)
+    })
 
     return () => {
-      Brightness.setBrightnessAsync(originalBrightness).catch(() => {})
+      Brightness.setBrightnessAsync(originalBrightness).catch((err) => {
+        console.error('Failed to restore brightness after barcode scan', err)
+      })
       deactivateKeepAwake('barcode-scan')
     }
   }, [visible])

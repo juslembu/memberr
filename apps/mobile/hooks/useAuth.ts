@@ -41,7 +41,10 @@ export function useAuthState(): AuthState {
     api.auth
       .me()
       .then(setUser)
-      .catch(() => setUser(null))
+      .catch((err) => {
+        console.error('Auth session check failed', err)
+        setUser(null)
+      })
       .finally(() => setLoading(false))
   }, [])
 
@@ -58,7 +61,11 @@ export function useAuthState(): AuthState {
   }
 
   async function logout() {
-    await api.auth.logout().catch(() => {})
+    try {
+      await api.auth.logout()
+    } catch (err) {
+      console.error('Logout failed', err)
+    }
     setUser(null)
     router.replace('/(auth)/login')
   }

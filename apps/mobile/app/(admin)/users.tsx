@@ -171,7 +171,11 @@ export default function AdminUsersScreen() {
   async function copyResetPassword() {
     if (!resetResult) return
     if (Platform.OS === 'web') {
-      await navigator.clipboard.writeText(resetResult).catch(() => {})
+      try {
+        await navigator.clipboard.writeText(resetResult)
+      } catch (err) {
+        console.error('Failed to copy reset password', err)
+      }
     }
     setCopied(true)
     setTimeout(() => setCopied(false), 3000)

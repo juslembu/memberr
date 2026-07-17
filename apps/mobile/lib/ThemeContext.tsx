@@ -20,7 +20,9 @@ function getWebInitial(): ThemePref {
       const v = localStorage.getItem(STORAGE_KEY)
       if (v === 'light' || v === 'dark' || v === 'system') return v
     }
-  } catch {}
+  } catch (err) {
+    console.error('Failed to read initial theme preference', err)
+  }
   return 'system'
 }
 

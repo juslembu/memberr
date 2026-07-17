@@ -232,7 +232,10 @@ export default function MyCardsScreen() {
       const [ownCards, sharedCards, orderMap] = await Promise.all([
         api.cards.list(),
         api.sharedWithMe.list(),
-        api.cardOrder.get().catch(() => ({} as Record<string, number>)),
+        api.cardOrder.get().catch((err) => {
+          console.error('Failed to load card order', err)
+          return {} as Record<string, number>
+        }),
       ])
       const combined: ListItem[] = [
         ...ownCards.map((card): ListItem => ({ kind: 'own', card })),
@@ -313,7 +316,20 @@ export default function MyCardsScreen() {
     const ids = Array.from(selectedIds)
     setItems((prev) => prev.filter((i) => !ids.includes(cardIdOf(i))))
     exitSelectionMode()
-    await Promise.all(ids.map((id) => api.cards.archive(id).catch(() => {})))
+    const failed: string[] = []
+    await Promise.all(
+      ids.map(async (id) => {
+        try {
+          await api.cards.archive(id)
+        } catch (err) {
+          console.error(`Failed to archive card ${id}`, err)
+          failed.push(id)
+        }
+      })
+    )
+    if (failed.length > 0) {
+      setError(`Failed to archive ${failed.length} card${failed.length > 1 ? 's' : ''}`)
+    }
   }
 
   async function shareSelected() {
@@ -321,24 +337,36 @@ export default function MyCardsScreen() {
     if (!val) return
     setBulkSharing(true)
     setBulkShareError('')
-    try {
-      const ids = Array.from(selectedIds)
-      await Promise.all(ids.map((id) => api.shares.share(id, { identifier: val }).catch(() => {})))
+    const ids = Array.from(selectedIds)
+    const failed: string[] = []
+    await Promise.all(
+      ids.map(async (id) => {
+        try {
+          await api.shares.share(id, { identifier: val })
+        } catch (err) {
+          console.error(`Failed to share card ${id}`, err)
+          failed.push(id)
+        }
+      })
+    )
+    if (failed.length > 0) {
+      setBulkShareError(`Failed to share ${failed.length} card${failed.length > 1 ? 's' : ''}`)
+    } else {
       setBulkShareOpen(false)
       setBulkShareIdentifier('')
       exitSelectionMode()
-    } catch (err) {
-      setBulkShareError(err instanceof ApiError ? err.message : 'Failed to share cards')
-    } finally {
-      setBulkSharing(false)
     }
+    setBulkSharing(false)
   }
 
   async function handleReorder(newItems: ListItem[]) {
     setItems(newItems)
     try {
       await api.cardOrder.save(newItems.map(cardIdOf))
-    } catch {}
+    } catch (err) {
+      console.error('Failed to save card order', err)
+      setError('Failed to save card order')
+    }
   }
 
   const pinnedCount = items.filter(isPinnedItem).length

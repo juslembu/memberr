@@ -243,7 +243,10 @@ export default function CardDetailScreen() {
         const [shareData, pendingData, publicLinksData] = await Promise.all([
           api.shares.list(id),
           api.shares.listPending(id),
-          api.publicShares.list(id).catch(() => [] as PublicShare[]),
+          api.publicShares.list(id).catch((err) => {
+            console.error('Failed to load public links', err)
+            return [] as PublicShare[]
+          }),
         ])
         setShares(shareData)
         setPendingInvites(pendingData)
@@ -273,7 +276,10 @@ export default function CardDetailScreen() {
       const updated = await api.cards.update(id, { isPinned: !card.isPinned })
       setCard(updated)
       if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
-    } catch {}
+    } catch (err) {
+      console.error('Failed to update pin state', err)
+      setError('Failed to update pin state')
+    }
   }
 
   async function handleCopyCardNumber() {
@@ -322,7 +328,11 @@ export default function CardDetailScreen() {
   async function copyInviteLink(token: string) {
     const url = `${serverUrl}/invite/${token}`
     if (Platform.OS === 'web') {
-      await navigator.clipboard.writeText(url).catch(() => {})
+      try {
+        await navigator.clipboard.writeText(url)
+      } catch (err) {
+        console.error('Failed to copy invite link', err)
+      }
     } else {
       await Share.share({ url, message: url })
     }
@@ -338,15 +348,25 @@ export default function CardDetailScreen() {
       confirmLabel: 'Revoke',
       destructive: true,
       onConfirm: async () => {
-        await api.shares.revoke(id, shareId).catch(() => {})
-        await load()
+        try {
+          await api.shares.revoke(id, shareId)
+          await load()
+        } catch (err) {
+          console.error('Failed to revoke share', err)
+          setShareError('Failed to revoke access')
+        }
       },
     })
   }
 
   async function handleCancelInvite(inviteId: string) {
-    await api.invitations.cancel(inviteId).catch(() => {})
-    await load()
+    try {
+      await api.invitations.cancel(inviteId)
+      await load()
+    } catch (err) {
+      console.error('Failed to cancel invitation', err)
+      setShareError('Failed to cancel invitation')
+    }
   }
 
   async function handleArchive() {
@@ -354,8 +374,9 @@ export default function CardDetailScreen() {
     try {
       await api.cards.archive(id)
       router.replace('/(tabs)/my-cards')
-    } catch {
-      // stay on screen so user can retry
+    } catch (err) {
+      console.error('Failed to archive card', err)
+      setError('Failed to archive card')
     } finally {
       setArchiving(false)
     }
@@ -368,8 +389,13 @@ export default function CardDetailScreen() {
       confirmLabel: 'Restore',
       onConfirm: async () => {
         setConfirmModal(null)
-        await api.cards.unarchive(id).catch(() => {})
-        router.replace('/(tabs)/my-cards')
+        try {
+          await api.cards.unarchive(id)
+          router.replace('/(tabs)/my-cards')
+        } catch (err) {
+          console.error('Failed to restore card', err)
+          setError('Failed to restore card')
+        }
       },
     })
   }
@@ -403,14 +429,23 @@ export default function CardDetailScreen() {
   }
 
   async function handleRevokePublicLink(shareId: string) {
-    await api.publicShares.revoke(id, shareId).catch(() => {})
-    await load()
+    try {
+      await api.publicShares.revoke(id, shareId)
+      await load()
+    } catch (err) {
+      console.error('Failed to revoke public link', err)
+      setPublicError('Failed to revoke public link')
+    }
   }
 
   async function copyPublicLink(token: string) {
     const url = `${serverUrl}/public/${token}`
     if (Platform.OS === 'web') {
-      await navigator.clipboard.writeText(url).catch(() => {})
+      try {
+        await navigator.clipboard.writeText(url)
+      } catch (err) {
+        console.error('Failed to copy public link', err)
+      }
     } else {
       await Share.share({ url, message: url })
     }

@@ -175,7 +175,10 @@ function RootLayoutContent() {
         setMinVersion(minAppVersion)
         setVersionOk(meetsMinVersion(APP_VERSION, minAppVersion))
       })
-      .catch(() => setVersionOk(true))
+      .catch((err) => {
+        console.error('Version check failed', err)
+        setVersionOk(true)
+      })
       .finally(() => clearTimeout(timeout))
     return () => { controller.abort(); clearTimeout(timeout) }
   }, [serverConfigured])

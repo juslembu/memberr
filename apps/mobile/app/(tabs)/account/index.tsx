@@ -143,7 +143,11 @@ export default function AccountScreen() {
 
   async function handleChangeServer() {
     setChangingServer(true)
-    await api.auth.logout().catch(() => {})
+    try {
+      await api.auth.logout()
+    } catch (err) {
+      console.error('Logout failed during server change', err)
+    }
     await clearServerUrl()
     setUser(null)
     router.replace('/server-setup')

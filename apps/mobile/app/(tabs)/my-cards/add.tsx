@@ -226,7 +226,9 @@ export default function AddCardScreen() {
     setCustomHex('')
     setShowCustomInput(false)
     scannedOnce.current = false
-    api.shops.list().then(setPredefinedShops).catch(() => {})
+    api.shops.list().then(setPredefinedShops).catch((err) => {
+      console.error('Failed to load predefined shops', err)
+    })
   }, []))
 
   function handleScanned(type: BarcodeType, value: string) {

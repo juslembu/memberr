@@ -47,7 +47,9 @@ export default function TabsLayout() {
       try {
         const data = await api.invitations.incoming()
         if (!cancelled) setPendingCount(data.length)
-      } catch {}
+      } catch (err) {
+        console.error('Failed to fetch invitation badge count', err)
+      }
     }
     registerBadgeRefresh(fetchCount)
     fetchCount()

@@ -50,14 +50,19 @@ export default function AdminIndexScreen() {
   useEffect(() => {
     api.admin.getSettings().then(s => {
       setRegistrationOpen(s['registration_open'] !== 'false')
-    }).catch(() => {})
+    }).catch((err) => {
+      console.error('Failed to load admin settings', err)
+    })
   }, [])
 
   async function toggleRegistration(value: boolean) {
     setRegistrationOpen(value)
-    await api.admin.updateSettings({ registration_open: value ? 'true' : 'false' }).catch(() => {
+    try {
+      await api.admin.updateSettings({ registration_open: value ? 'true' : 'false' })
+    } catch (err) {
+      console.error('Failed to update registration setting', err)
       setRegistrationOpen(!value)
-    })
+    }
   }
 
   return (

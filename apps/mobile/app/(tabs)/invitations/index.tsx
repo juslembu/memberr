@@ -65,8 +65,9 @@ export default function InvitationsScreen() {
       const data = await api.invitations.incoming()
       setInvitations(data)
       setError(null)
-    } catch {}
-    finally {
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Failed to load invitations')
+    } finally {
       setLoading(false)
       setRefreshing(false)
     }

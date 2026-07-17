@@ -105,7 +105,9 @@ export function BarcodeScanner({ onScanned, onCancel }: Props) {
 
     return () => {
       cancelled = true
-      try { readerRef.current?.reset() } catch {}
+      try { readerRef.current?.reset() } catch (err) {
+        console.error('Failed to reset barcode reader', err)
+      }
       if (videoRef.current?.srcObject) {
         const stream = videoRef.current.srcObject as MediaStream
         stream.getTracks().forEach(tr => tr.stop())

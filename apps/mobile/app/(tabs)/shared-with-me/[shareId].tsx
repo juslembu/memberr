@@ -87,7 +87,10 @@ export default function SharedCardDetailScreen() {
       const result = await api.sharedWithMe.togglePin(shareId)
       setIsPinned(result.isPinned)
       if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
-    } catch {}
+    } catch (err) {
+      console.error('Failed to toggle pin', err)
+      setError('Failed to update pin')
+    }
   }
 
   if (loading) {

@@ -5,6 +5,8 @@ export function useServiceWorker() {
   useEffect(() => {
     if (Platform.OS !== 'web') return
     if (!('serviceWorker' in navigator)) return
-    navigator.serviceWorker.register('/sw.js').catch(() => {})
+    navigator.serviceWorker.register('/sw.js').catch((err) => {
+      console.error('Service worker registration failed', err)
+    })
   }, [])
 }

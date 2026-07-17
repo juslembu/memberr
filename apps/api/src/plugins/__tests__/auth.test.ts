@@ -34,6 +34,7 @@ vi.mock('../../config.js', () => ({
     PORT: 3000,
     NODE_ENV: 'test',
     CORS_ORIGINS: 'http://localhost:8081',
+    MIN_APP_VERSION: '1.0.0',
   },
 }))
 

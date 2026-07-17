@@ -1,7 +1,7 @@
 import * as SecureStore from 'expo-secure-store'
 import { Platform } from 'react-native'
-import Constants from 'expo-constants'
 import { getServerUrl } from './serverUrl'
+import { APP_VERSION } from './appInfo'
 import type {
   User,
   Card,
@@ -22,8 +22,6 @@ import type {
   UpdateProfileInput,
   CreateShopInput,
 } from '@memberr/shared'
-
-const APP_VERSION = Constants.expoConfig?.version ?? '1.0.0'
 
 const ACCESS_TOKEN_KEY = 'memberr_access_token'
 

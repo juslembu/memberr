@@ -56,13 +56,14 @@ jobs:
             const fs = require('fs');
             const tag = process.env.GITHUB_REF_NAME;
             const version = tag.startsWith('v') ? tag.slice(1) : tag;
+            const isBeta = tag.includes('-beta');
+            const appName = isBeta ? 'Memberr Beta' : 'Memberr';
             const cfg = JSON.parse(fs.readFileSync('app.json', 'utf8'));
             cfg.expo.version = version;
-            if (tag.includes('-beta')) {
-              cfg.expo.name = 'Memberr Beta';
-            }
+            cfg.expo.name = appName;
             fs.writeFileSync('app.json', JSON.stringify(cfg, null, 2) + '\n');
-            console.log('Tag:', tag, '→ version:', version, 'name:', cfg.expo.name);
+            fs.writeFileSync('lib/appInfo.ts', \`export const APP_VERSION = '\${version}'\nexport const APP_NAME = '\${appName}'\n\`);
+            console.log('Tag:', tag, '→ version:', version, 'name:', appName);
           "
 
       - name: Prebuild native Android project

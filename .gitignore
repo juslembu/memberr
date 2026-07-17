@@ -23,7 +23,17 @@ backups/
 CLAUDE.md
 
 # Downloaded GitHub Actions / Docker build debugging artifacts
-# imports/
+imports/
+
+# Release notes source — copy-pasted into GitHub Releases, not tracked in git
+RELEASES.md
 
 # Locally-installed skill, not part of the tracked project skill set
 .agents/skills/create-readme/
+
+# Test / lint / build artifacts
+coverage/
+.eslintcache
+*.tsbuildinfo
+apps/mobile/dist/
+.expo-shared/

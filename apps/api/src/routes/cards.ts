@@ -4,10 +4,28 @@ import { cards } from '../db/schema.js'
 import { eq, and, desc } from 'drizzle-orm'
 import { createCardSchema, updateCardSchema } from '@memberr/shared'
 
+// Columns returned by list endpoints. Excludes cardImageUrl because it stores
+// a base64 JPEG that can be large; the detail endpoint returns the full card.
+const CARD_LIST_COLUMNS = {
+  id: cards.id,
+  ownerId: cards.ownerId,
+  storeName: cards.storeName,
+  cardNumber: cards.cardNumber,
+  barcodeType: cards.barcodeType,
+  notes: cards.notes,
+  color: cards.color,
+  logoUrl: cards.logoUrl,
+  isPinned: cards.isPinned,
+  expiresAt: cards.expiresAt,
+  isActive: cards.isActive,
+  createdAt: cards.createdAt,
+  updatedAt: cards.updatedAt,
+}
+
 export default async function cardRoutes(app: FastifyInstance) {
   app.get('/', async (request) => {
     return db
-      .select()
+      .select(CARD_LIST_COLUMNS)
       .from(cards)
       .where(and(eq(cards.ownerId, request.userId), eq(cards.isActive, true)))
       .orderBy(desc(cards.isPinned), cards.createdAt)
@@ -15,7 +33,7 @@ export default async function cardRoutes(app: FastifyInstance) {
 
   app.get('/archived', async (request) => {
     return db
-      .select()
+      .select(CARD_LIST_COLUMNS)
       .from(cards)
       .where(and(eq(cards.ownerId, request.userId), eq(cards.isActive, false)))
       .orderBy(desc(cards.updatedAt))

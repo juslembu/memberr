@@ -3,6 +3,7 @@ import {
   View,
   Text,
   StyleSheet,
+  type ViewStyle,
   ScrollView,
   TouchableOpacity,
   TextInput,
@@ -885,7 +886,7 @@ export default function CardDetailScreen() {
     </ScrollView>
 
     {confirmModal && (
-      <View style={[StyleSheet.absoluteFillObject, Platform.OS === 'web' ? { position: 'fixed' } : {}, { zIndex: 100, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center', padding: 24 }]}>
+      <View style={[StyleSheet.absoluteFillObject, Platform.OS === 'web' ? ({ position: 'fixed' } as ViewStyle) : {}, { zIndex: 100, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center', padding: 24 }]}>
         <View style={[styles.modalContent, styles.confirmContent, { backgroundColor: t.surface }]}>
           <Text style={styles.modalTitle}>{confirmModal.title}</Text>
           <Text style={styles.confirmMessage}>{confirmModal.message}</Text>

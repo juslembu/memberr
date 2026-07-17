@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   RefreshControl,
   Platform,
+  type ViewStyle,
 } from 'react-native'
 import { useRouter, useFocusEffect } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
@@ -179,7 +180,7 @@ export default function ArchivedCardsScreen() {
       />
 
       {deleteId && (
-        <View style={[styles.overlay, Platform.OS === 'web' ? { position: 'fixed' } : {}]}>
+        <View style={[styles.overlay, Platform.OS === 'web' ? ({ position: 'fixed' } as ViewStyle) : {}]}>
           <View style={styles.dialog}>
             <Text style={styles.dialogTitle}>Delete permanently?</Text>
             <Text style={styles.dialogMessage}>This cannot be undone.</Text>

@@ -70,6 +70,7 @@ export function BarcodeDisplay({ value, type, width = 280, height = 100 }: Props
           maxWidth={width}
           lineColor='#0F172A'
           backgroundColor="transparent"
+          {...({} as any)}
         />
       </View>
     )

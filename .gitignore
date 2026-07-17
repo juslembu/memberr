@@ -31,6 +31,9 @@ RELEASES.md
 # Locally-installed skill, not part of the tracked project skill set
 .agents/skills/create-readme/
 
+# Locally-installed Claude skills
+.claude/
+
 # Test / lint / build artifacts
 coverage/
 .eslintcache

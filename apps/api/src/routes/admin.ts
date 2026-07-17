@@ -62,8 +62,23 @@ export default async function adminRoutes(app: FastifyInstance) {
     if (id === request.userId) {
       return reply.code(400).send({ error: 'Cannot delete your own account' })
     }
-    const [target] = await db.select({ id: users.id }).from(users).where(eq(users.id, id)).limit(1)
+    const [target] = await db
+      .select({ id: users.id, isAdmin: users.isAdmin })
+      .from(users)
+      .where(eq(users.id, id))
+      .limit(1)
     if (!target) return reply.code(404).send({ error: 'User not found' })
+
+    if (target.isAdmin) {
+      const [{ adminCount }] = await db
+        .select({ adminCount: count() })
+        .from(users)
+        .where(eq(users.isAdmin, true))
+      if (adminCount <= 1) {
+        return reply.code(400).send({ error: 'Cannot delete the last admin account' })
+      }
+    }
+
     await db.delete(users).where(eq(users.id, id))
     return { ok: true }
   })

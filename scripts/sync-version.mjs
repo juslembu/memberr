@@ -10,8 +10,9 @@ let tag
 try {
   tag = execSync('git describe --tags --abbrev=0', { encoding: 'utf8' }).trim()
 } catch {
-  console.log('No git tags found — skipping version sync')
-  process.exit(0)
+  console.error('ERROR: No reachable git tag found. `deploy:web` requires a tag to set the web app version.')
+  console.error('Run `git fetch --tags` and ensure the current checkout has a tag, or tag the release first.')
+  process.exit(1)
 }
 
 const version = tag.startsWith('v') ? tag.slice(1) : tag

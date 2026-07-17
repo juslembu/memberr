@@ -80,10 +80,13 @@ pnpm test                                    # all tests (via turbo)
 pnpm --filter @memberr/shared test           # shared Zod schema tests only
 pnpm --filter @memberr/shared test:watch     # watch mode
 pnpm --filter @memberr/api test              # API tests only
+pnpm --filter @memberr/mobile test           # mobile tests only (Jest)
 ```
 
 - `packages/shared/src/validation/__tests__/validation.test.ts` — all Zod schema edge cases.
 - `apps/api/src/plugins/__tests__/auth.test.ts` — auth helpers (token hashing, JWT signing, refresh token rotation, reuse detection). Mocks the DB layer so no Postgres needed.
+- `apps/mobile/lib/__tests__/serverUrl.test.ts` — pure URL normalization logic.
+- `apps/mobile/app/(auth)/__tests__/login.test.tsx` — React Native component test (Jest + React Native Testing Library). Requires native module mocks in `apps/mobile/jest.setup.js`.
 - Tests also run in CI via `.github/workflows/test.yml` on push to `main` and on PRs.
 
 ## Deployment gotchas

@@ -29,15 +29,11 @@ services:
       PORT: 3000
       NODE_ENV: ${NODE_ENV:-development}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8081,http://localhost:3000}
-      UPLOAD_DIR: /app/uploads
     ports:
       - "3000:3000"
     depends_on:
       postgres:
         condition: service_healthy
-    volumes:
-      - uploads:/app/uploads
 
 volumes:
   postgres_data:
-  uploads:

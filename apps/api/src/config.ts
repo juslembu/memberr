@@ -7,7 +7,6 @@ const envSchema = z.object({
   PORT: z.coerce.number().default(3000),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   CORS_ORIGINS: z.string().default('http://localhost:8081'),
-  UPLOAD_DIR: z.string().default('./uploads'),
 })
 
 const parsed = envSchema.safeParse(process.env)

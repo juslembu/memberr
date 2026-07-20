@@ -12,6 +12,7 @@ import {
   TouchableOpacity,
 } from 'react-native'
 import { useRouter, useFocusEffect } from 'expo-router'
+import * as ImageManipulator from 'expo-image-manipulator'
 import { pickImage } from '../../../lib/imagePicker'
 import { Ionicons } from '@expo/vector-icons'
 import { api, ApiError } from '../../../lib/api'
@@ -48,7 +49,23 @@ async function compressToDataUrl(uri: string): Promise<string | null> {
     canvas.height = Math.round(img.height * scale)
     canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height)
     return canvas.toDataURL('image/jpeg', 0.75)
-  } catch {
+  } catch (err) {
+    console.error('Failed to compress image on web', err)
+    return null
+  }
+}
+
+async function compressImageNative(uri: string): Promise<string | null> {
+  try {
+    const result = await ImageManipulator.manipulateAsync(
+      uri,
+      [{ resize: { width: 1200 } }],
+      { compress: 0.75, format: ImageManipulator.SaveFormat.JPEG, base64: true },
+    )
+    if (!result.base64) return null
+    return `data:image/jpeg;base64,${result.base64}`
+  } catch (err) {
+    console.error('Failed to compress image on native', err)
     return null
   }
 }
@@ -70,7 +87,8 @@ async function detectBarcodeFromImage(uri: string): Promise<{ value: string; typ
     const formatName = BarcodeFormat[result.getBarcodeFormat()]
     const type = FORMAT_MAP[formatName] ?? 'CODE128'
     return { value: result.getText(), type }
-  } catch {
+  } catch (err) {
+    console.error('Failed to detect barcode from image', err)
     return null
   }
 }
@@ -241,30 +259,48 @@ export default function AddCardScreen() {
 
   async function handleUpload() {
     setDetectError('')
-    const picked = await pickImage()
-    if (!picked) return
-    const uri = picked.uri
-
-    if (Platform.OS !== 'web') {
-      setStep('form')
+    let uri: string
+    try {
+      const picked = await pickImage()
+      if (!picked) return
+      uri = picked.uri
+    } catch (err) {
+      console.error('Failed to pick image', err)
+      setDetectError('Could not open photo library. Please check permissions and try again.')
       return
     }
 
     setUploadedImageUri(uri)
     setDetecting(true)
-    const [detected, dataUrl] = await Promise.all([
-      detectBarcodeFromImage(uri),
-      compressToDataUrl(uri),
-    ])
-    setCardDataUrl(dataUrl)
-    setDetecting(false)
 
-    if (detected) {
-      setCardNumber(detected.value)
-      setBarcodeType(detected.type)
-    } else {
-      setDetectError('No barcode found in image. You can enter the number manually below.')
+    try {
+      if (Platform.OS !== 'web') {
+        const dataUrl = await compressImageNative(uri)
+        if (dataUrl) {
+          setCardDataUrl(dataUrl)
+        } else {
+          setDetectError('Could not process the image. Try a smaller photo or scan the barcode instead.')
+        }
+      } else {
+        const [detected, dataUrl] = await Promise.all([
+          detectBarcodeFromImage(uri),
+          compressToDataUrl(uri),
+        ])
+        setCardDataUrl(dataUrl)
+        if (detected) {
+          setCardNumber(detected.value)
+          setBarcodeType(detected.type)
+        } else {
+          setDetectError('No barcode found in image. You can enter the number manually below.')
+        }
+      }
+    } catch (err) {
+      console.error('Failed to process uploaded image', err)
+      setDetectError('Could not process the image. Try again or enter the card number manually.')
+    } finally {
+      setDetecting(false)
     }
+
     setStep('form')
   }
 
@@ -328,14 +364,18 @@ export default function AddCardScreen() {
               : <Ionicons name="image-outline" size={28} color="#ec4899" />}
           </View>
           <View style={styles.methodText}>
-            <Text style={styles.methodLabel}>Upload card image</Text>
+            <Text style={styles.methodLabel}>
+              {detecting ? 'Processing image…' : 'Upload card image'}
+            </Text>
             <Text style={styles.methodDesc}>
-              {Platform.OS === 'web'
-                ? "Pick a photo of your card — we'll detect the barcode automatically"
-                : 'Choose a photo from your library'}
+              {detecting
+                ? 'Compressing and attaching your card image'
+                : Platform.OS === 'web'
+                  ? "Pick a photo of your card — we'll detect the barcode automatically"
+                  : 'Choose a photo of your card to attach as a reference'}
             </Text>
           </View>
-          <Ionicons name="chevron-forward" size={20} color={t.textSubtle} />
+          {detecting ? null : <Ionicons name="chevron-forward" size={20} color={t.textSubtle} />}
         </Pressable>
 
         <Pressable style={styles.methodCard} onPress={() => setStep('form')}>

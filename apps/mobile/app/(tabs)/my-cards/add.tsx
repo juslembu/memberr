@@ -97,6 +97,8 @@ function makeStyles(t: Theme) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: t.bg },
     methodContainer: { flex: 1, backgroundColor: t.bg, padding: 24, paddingTop: 32 },
+    methodHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 16, marginTop: 4 },
+    methodBack: { padding: 4, marginRight: 8 },
     methodTitle: { fontSize: 24, fontWeight: '800', color: t.text, marginBottom: 6 },
     methodSub: { fontSize: 15, color: t.textMuted, marginBottom: 32 },
     methodCard: {
@@ -339,6 +341,11 @@ export default function AddCardScreen() {
   if (step === 'method') {
     return (
       <View style={styles.methodContainer}>
+        <View style={styles.methodHeader}>
+          <TouchableOpacity style={styles.methodBack} onPress={() => router.back()}>
+            <Ionicons name="arrow-back" size={24} color={t.text} />
+          </TouchableOpacity>
+        </View>
         <Text style={styles.methodTitle}>Add a membership card</Text>
         <Text style={styles.methodSub}>How would you like to add your card?</Text>
 

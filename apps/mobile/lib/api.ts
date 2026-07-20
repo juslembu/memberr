@@ -65,6 +65,7 @@ async function fetchWithAuth(path: string, options: RequestInit = {}): Promise<R
       return fetch(`${API_URL}${path}`, { ...options, headers, credentials: 'include' })
     } else {
       await clearAccessToken()
+      authEvents.emit()
       throw new ApiError(401, 'Session expired')
     }
   }
@@ -80,6 +81,21 @@ export class ApiError extends Error {
     super(message)
     this.name = 'ApiError'
   }
+}
+
+// Simple event bus so the API layer can signal a fatal auth failure (e.g.
+// refresh-token expired or revoked) without importing React/router.
+export const authEvents = {
+  listeners: new Set<() => void>(),
+  emit() {
+    this.listeners.forEach((cb) => cb())
+  },
+  subscribe(cb: () => void) {
+    this.listeners.add(cb)
+    return () => {
+      this.listeners.delete(cb)
+    }
+  },
 }
 
 async function json<T>(res: Response): Promise<T> {

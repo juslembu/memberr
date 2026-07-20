@@ -1,6 +1,6 @@
-import { useState, useEffect, createContext, useContext } from 'react'
+import { useState, useEffect, useRef, createContext, useContext } from 'react'
 import { router } from 'expo-router'
-import { api } from '../lib/api'
+import { api, authEvents } from '../lib/api'
 import type { User, RegisterInput, LoginInput } from '@memberr/shared'
 
 interface AuthState {
@@ -36,6 +36,16 @@ function routeAfterLogin(user: User) {
 export function useAuthState(): AuthState {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
+  const sessionExpiredHandled = useRef(false)
+
+  useEffect(() => {
+    return authEvents.subscribe(() => {
+      if (sessionExpiredHandled.current) return
+      sessionExpiredHandled.current = true
+      setUser(null)
+      router.replace('/(auth)/login')
+    })
+  }, [])
 
   useEffect(() => {
     api.auth
